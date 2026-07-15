@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
-import { SessionProvider } from "next-auth/react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "KPI Dashboard - Advanced Tracking & Monitoring",
-  description: "Enterprise-grade KPI tracking, monitoring, and team scorecard dashboard",
+  description:
+    "Enterprise-grade KPI tracking, monitoring, and team scorecard dashboard",
 };
 
 export default function RootLayout({
@@ -21,9 +21,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={inter.className}>
         <ErrorBoundary>
-          <SessionProvider>
-            <QueryProvider>{children}</QueryProvider>
-          </SessionProvider>
+          <QueryProvider>{children}</QueryProvider>
         </ErrorBoundary>
       </body>
     </html>
