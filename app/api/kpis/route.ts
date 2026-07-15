@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { airtableService } from "@/services/airtable.service";
 import { KPISchema, CreateKPISchema } from "@/schemas/validation";
-import { auth } from "@/lib/auth/auth";
-import { hasPermission } from "@/lib/auth/permissions";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
 import type { APIResponse, KPI } from "@/types/models";
@@ -89,32 +87,6 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You must be logged in to create KPIs",
-        } as APIResponse<null>,
-        { status: 401 }
-      );
-    }
-
-    const userRole = session.user.role;
-
-    if (!hasPermission(userRole, "kpis", "create")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden",
-          message: "You do not have permission to create KPIs",
-        } as APIResponse<null>,
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
 
     // Validate input

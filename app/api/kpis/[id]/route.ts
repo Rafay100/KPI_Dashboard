@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { airtableService } from "@/services/airtable.service";
 import { KPISchema, UpdateKPISchema } from "@/schemas/validation";
-import { auth } from "@/lib/auth/auth";
-import { hasPermission } from "@/lib/auth/permissions";
 import { cleanErrorMessage } from "@/utils/helpers";
 import type { APIResponse, KPI } from "@/types/models";
 import type { FieldSet } from "airtable";
@@ -17,32 +15,6 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You must be logged in to access this resource",
-        } as APIResponse<null>,
-        { status: 401 }
-      );
-    }
-
-    const userRole = session.user.role;
-
-    if (!hasPermission(userRole, "kpis", "read")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden",
-          message: "You do not have permission to view KPIs",
-        } as APIResponse<null>,
-        { status: 403 }
-      );
-    }
-
     const kpi = await airtableService.getKPIById(id);
 
     if (!kpi) {
@@ -90,32 +62,6 @@ export async function PUT(
 ) {
   const { id } = await params;
   try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You must be logged in to update KPIs",
-        } as APIResponse<null>,
-        { status: 401 }
-      );
-    }
-
-    const userRole = session.user.role;
-
-    if (!hasPermission(userRole, "kpis", "update")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden",
-          message: "You do not have permission to update KPIs",
-        } as APIResponse<null>,
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
 
     // Validate input
@@ -168,32 +114,6 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You must be logged in to delete KPIs",
-        } as APIResponse<null>,
-        { status: 401 }
-      );
-    }
-
-    const userRole = session.user.role;
-
-    if (!hasPermission(userRole, "kpis", "delete")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden",
-          message: "You do not have permission to delete KPIs",
-        } as APIResponse<null>,
-        { status: 403 }
-      );
-    }
-
     await airtableService.deleteRecord("KPIs", id);
 
     return NextResponse.json(

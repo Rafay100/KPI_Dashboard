@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth/auth";
 import type { APIResponse } from "@/types/models";
 
 /**
@@ -8,31 +7,6 @@ import type { APIResponse } from "@/types/models";
  */
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-          message: "You must be logged in to view users",
-        } as APIResponse<null>,
-        { status: 401 }
-      );
-    }
-
-    // Only admins can view all users
-    if (session.user.role !== "admin") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Forbidden",
-          message: "Only administrators can view all users",
-        } as APIResponse<null>,
-        { status: 403 }
-      );
-    }
-
     // Fetch users from Airtable
     const base = (await import("@/services/airtable.client")).default.getBase();
     const records = await base("Users").select().all();
