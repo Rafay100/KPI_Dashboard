@@ -38,10 +38,11 @@ export function mapKPIFromAirtable(
     id: record.id,
     kpiName: safeString(fields["KPI Name"]) || `KPI-${record.id.slice(0, 8)}`,
     description: safeString(fields["Description"] || fields["Notes"]),
-    departmentId: safeString(fields["Department"]),
-    employeeId: safeString(fields["Assigned Employee"]),
-    targetValue: safeNumber(fields["target"]),  // lowercase "target"
-    actualValue: safeNumber(fields["actual"]),  // lowercase "actual"
+    // Resolve department and employee references using possible field names
+    departmentId: safeString(getFieldValue(fields, ["Department ID", "Department", "Dept", "department"])),
+    employeeId: safeString(getFieldValue(fields, ["Employee ID", "Assigned Employee", "Employee", "assignedEmployee"])),
+    targetValue: safeNumber(getFieldValue(fields, ["Target Value", "target", "Target", "targetValue"])),
+    actualValue: safeNumber(getFieldValue(fields, ["Actual Value", "actual", "Actual", "actualValue"])),
     status: normalizeKPIStatus(safeString(fields["Status"])),
     score: safeNumber(fields["Score"] || fields["score"]),
     dueDate: formatDateISO(safeString(fields["Due Date"])),
