@@ -1,0 +1,27 @@
+
+> custom-kpi-dashboard@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+   ▲ Next.js 15.1.3
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.42:3002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 13.5s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1402ms (225 modules)
+[33m[auth][warn][debug-enabled][0m Read more: https://warnings.authjs.dev
+ ○ Compiling /api/kpis ...
+ ✓ Compiled /api/kpis in 12.3s (664 modules)
+🔄 Fetching KPIs from Airtable...
+(node:13740) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅ Cached 10 KPIs
+ GET /api/kpis 200 in 28787ms
+✅ Serving KPIs from cache
+ GET /api/kpis 200 in 24ms
+ ✓ Compiled in 417ms
+ ✓ Compiled in 10.3s (475 modules)

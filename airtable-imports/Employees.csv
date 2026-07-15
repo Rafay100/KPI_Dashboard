@@ -1,0 +1,16 @@
+Name,name,email,department_name,role,kpi_score,task_completion_rate,achievement_points,overall_score,kpis_assigned,kpis_completed,active_status,created_at,updated_at,manager_name,team_name
+John Doe,John Doe,john.doe@company.com,Engineering,Senior Developer,88.5,92.0,450,88.5,8,6,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,John Smith,Backend Team
+Jane Smith,Jane Smith,jane.smith@company.com,Sales,Account Executive,95.2,98.0,680,95.2,6,5,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Sarah Johnson,Enterprise Sales
+Michael Brown,Michael Brown,michael.brown@company.com,Marketing,Content Manager,91.8,94.5,520,91.8,7,6,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Michael Chen,Content Team
+Sarah Wilson,Sarah Wilson,sarah.wilson@company.com,HR,HR Specialist,87.3,89.0,390,87.3,5,4,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Emily Davis,People Ops
+David Lee,David Lee,david.lee@company.com,Engineering,DevOps Engineer,84.6,88.5,410,84.6,9,7,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,John Smith,DevOps Team
+Emma Garcia,Emma Garcia,emma.garcia@company.com,Sales,Sales Representative,82.4,85.0,340,82.4,5,3,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Sarah Johnson,SMB Sales
+Lucas Martinez,Lucas Martinez,lucas.martinez@company.com,Marketing,Social Media Manager,89.7,91.0,480,89.7,6,5,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Michael Chen,Social Team
+Olivia Taylor,Olivia Taylor,olivia.taylor@company.com,Engineering,Frontend Developer,86.3,87.5,425,86.3,7,5,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,John Smith,Frontend Team
+Noah Anderson,Noah Anderson,noah.anderson@company.com,Sales,Sales Manager,93.1,96.0,610,93.1,8,7,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Sarah Johnson,Sales Leadership
+Sophia Thomas,Sophia Thomas,sophia.thomas@company.com,Marketing,SEO Specialist,88.9,90.0,470,88.9,6,5,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Michael Chen,Growth Team
+James White,James White,james.white@company.com,HR,Recruiter,85.7,88.0,380,85.7,4,3,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Emily Davis,Talent Team
+Isabella Harris,Isabella Harris,isabella.harris@company.com,Engineering,QA Engineer,90.2,93.0,495,90.2,7,6,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,John Smith,Quality Team
+William Clark,William Clark,william.clark@company.com,Sales,Business Development Rep,79.8,82.0,310,79.8,4,2,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Sarah Johnson,BDR Team
+Ava Lewis,Ava Lewis,ava.lewis@company.com,Marketing,Designer,92.5,95.0,550,92.5,5,5,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,Michael Chen,Design Team
+Ethan Walker,Ethan Walker,ethan.walker@company.com,Engineering,Backend Developer,87.4,89.5,440,87.4,8,6,Active,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,John Smith,Backend Team

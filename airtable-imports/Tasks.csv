@@ -1,0 +1,21 @@
+Name,task_name,description,assigned_employee_name,department_name,status,priority,due_date,created_at,updated_at,estimated_hours,completion_percentage
+Optimize database queries,Optimize database queries,Review and optimize slow database queries for better performance,John Doe,Engineering,in-progress,high,2026-07-15T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,8,60
+Follow up with leads,Follow up with leads,Contact 20 warm leads from last week's campaign,Jane Smith,Sales,completed,high,2026-07-11T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,4,100
+Create social media calendar,Create social media calendar,Plan content calendar for next month across all platforms,Michael Brown,Marketing,todo,medium,2026-07-22T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,6,0
+Update employee handbook,Update employee handbook,Revise policies and procedures for 2026,Sarah Wilson,HR,in-progress,low,2026-08-07T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,12,35
+Fix login page bug,Fix login page bug,Resolve authentication issue on mobile devices,David Lee,Engineering,completed,critical,2026-07-09T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,3,100
+Prepare Q2 sales report,Prepare Q2 sales report,Compile and analyze Q2 sales data for executive review,Emma Garcia,Sales,in-progress,high,2026-07-12T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,5,70
+Launch email campaign,Launch email campaign,Design and launch summer product promotion campaign,Lucas Martinez,Marketing,todo,high,2026-07-16T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,8,0
+Conduct performance reviews,Conduct performance reviews,Complete mid-year performance reviews for all team members,Olivia Taylor,Engineering,blocked,medium,2026-07-20T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,10,20
+Update CRM data,Update CRM data,Clean and update customer records in CRM system,Noah Anderson,Sales,in-progress,low,2026-07-25T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,6,45
+SEO audit,SEO audit,Comprehensive SEO audit of company website,Sophia Thomas,Marketing,completed,medium,2026-07-10T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,8,100
+Schedule interviews,Schedule interviews,Coordinate interviews for open engineering positions,James White,HR,todo,high,2026-07-14T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,4,0
+Write API documentation,Write API documentation,Document new API endpoints for external developers,Isabella Harris,Engineering,in-progress,medium,2026-07-18T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,12,55
+Cold call prospects,Cold call prospects,Reach out to 50 potential clients in target industries,William Clark,Sales,todo,medium,2026-07-17T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,10,0
+Redesign landing page,Redesign landing page,Create new landing page design with improved conversion focus,Ava Lewis,Marketing,in-progress,high,2026-07-21T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,15,40
+Implement caching layer,Implement caching layer,Add Redis caching to improve API response times,Ethan Walker,Engineering,todo,high,2026-07-19T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,16,0
+Prepare sales deck,Prepare sales deck,Update sales presentation with latest product features,Jane Smith,Sales,completed,medium,2026-07-09T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,4,100
+Conduct user testing,Conduct user testing,Run usability tests on new dashboard features,Michael Brown,Marketing,blocked,low,2026-07-24T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,8,10
+Update benefits package,Update benefits package,Review and update employee benefits for new fiscal year,Sarah Wilson,HR,in-progress,medium,2026-07-30T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,10,25
+Security audit,Security audit,Perform security audit on all production systems,David Lee,Engineering,todo,critical,2026-07-13T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,20,0
+Plan team offsite,Plan team offsite,Organize Q3 team building event and activities,Emma Garcia,HR,todo,low,2026-08-05T12:00:00.000Z,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z,6,0

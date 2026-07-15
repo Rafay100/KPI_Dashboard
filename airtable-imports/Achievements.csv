@@ -1,0 +1,16 @@
+Name,title,description,employee_name,department_name,points,achievement_category,badge_type,date_earned,created_at,impact_level
+Top Performer Q2,Top Performer Q2,Exceeded all KPI targets for Q2 with outstanding results,Jane Smith,Sales,500,excellence,gold,2026-07-01T12:00:00.000Z,2026-07-01T12:00:00.000Z,high
+Fast Finisher,Fast Finisher,Completed KPI ahead of schedule showing exceptional efficiency,Michael Brown,Marketing,300,kpi-completion,silver,2026-06-28T12:00:00.000Z,2026-06-28T12:00:00.000Z,medium
+Team Player,Team Player,Helped colleagues achieve their goals through collaboration,John Doe,Engineering,200,teamwork,bronze,2026-06-25T12:00:00.000Z,2026-06-25T12:00:00.000Z,medium
+Innovation Award,Innovation Award,Implemented creative solution that improved system performance,David Lee,Engineering,450,excellence,gold,2026-07-05T12:00:00.000Z,2026-07-05T12:00:00.000Z,high
+Perfect Attendance,Perfect Attendance,100% attendance record for the quarter,Sarah Wilson,HR,150,milestone,bronze,2026-07-01T12:00:00.000Z,2026-07-01T12:00:00.000Z,low
+Sales Champion,Sales Champion,Highest sales revenue achieved in a single month,Noah Anderson,Sales,550,excellence,gold,2026-06-30T12:00:00.000Z,2026-06-30T12:00:00.000Z,high
+Content Creator,Content Creator,Published 30 high-quality blog posts this quarter,Lucas Martinez,Marketing,350,milestone,silver,2026-07-02T12:00:00.000Z,2026-07-02T12:00:00.000Z,medium
+Bug Hunter,Bug Hunter,Identified and fixed 50 critical bugs,Isabella Harris,Engineering,400,excellence,gold,2026-06-27T12:00:00.000Z,2026-06-27T12:00:00.000Z,high
+Customer Hero,Customer Hero,Received 10+ customer compliments for exceptional service,Emma Garcia,Sales,250,excellence,silver,2026-07-03T12:00:00.000Z,2026-07-03T12:00:00.000Z,medium
+Design Excellence,Design Excellence,Created award-winning campaign design,Ava Lewis,Marketing,400,excellence,gold,2026-06-29T12:00:00.000Z,2026-06-29T12:00:00.000Z,high
+Mentor of the Month,Mentor of the Month,Successfully mentored 3 junior team members,Olivia Taylor,Engineering,300,teamwork,silver,2026-07-01T12:00:00.000Z,2026-07-01T12:00:00.000Z,medium
+KPI Streak,KPI Streak,Completed 5 consecutive KPIs with 100% score,Sophia Thomas,Marketing,350,kpi-completion,silver,2026-07-04T12:00:00.000Z,2026-07-04T12:00:00.000Z,medium
+Recruitment Star,Recruitment Star,Successfully hired 8 qualified candidates,James White,HR,400,milestone,gold,2026-07-02T12:00:00.000Z,2026-07-02T12:00:00.000Z,high
+Code Quality Master,Code Quality Master,Maintained 100% code review approval rate,Ethan Walker,Engineering,300,excellence,silver,2026-06-26T12:00:00.000Z,2026-06-26T12:00:00.000Z,medium
+Deal Closer,Deal Closer,Closed 5 enterprise deals in one month,William Clark,Sales,450,milestone,gold,2026-07-01T12:00:00.000Z,2026-07-01T12:00:00.000Z,high

@@ -1,0 +1,35 @@
+
+> custom-kpi-dashboard@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./components/charts/LazyCharts.tsx
+19:64  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+27:65  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+35:58  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+43:59  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+51:66  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+59:71  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+Failed to compile.
+
+./app/api/kpis/[id]/route.ts:136:52
+Type error: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'Partial<FieldSet>'.
+  'string' index signatures are incompatible.
+    Type 'unknown' is not assignable to type 'string | number | boolean | readonly string[] | Collaborator | readonly Collaborator[] | readonly Attachment[] | undefined'.
+
+[0m [90m 134 |[39m     airtableFields[33m.[39m[33mLastUpdated[39m [33m=[39m [36mnew[39m [33mDate[39m()[33m.[39mtoISOString()[33m;[39m[0m
+[0m [90m 135 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 136 |[39m     [36mawait[39m airtableService[33m.[39mupdateRecord([32m"KPIs"[39m[33m,[39m id[33m,[39m airtableFields)[33m;[39m[0m
+[0m [90m     |[39m                                                    [31m[1m^[22m[39m[0m
+[0m [90m 137 |[39m[0m
+[0m [90m 138 |[39m     [36mreturn[39m [33mNextResponse[39m[33m.[39mjson([0m
+[0m [90m 139 |[39m       {[0m
+Static worker exited with code: 1 and signal: null

@@ -1,0 +1,86 @@
+
+> custom-kpi-dashboard@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./app/api/kpis/route.ts
+123:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+143:24  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./app/api/kpis/[id]/route.ts
+124:42  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+143:24  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+203:24  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./lib/auth/auth.ts
+64:30  Warning: 'trigger' is defined but never used.  @typescript-eslint/no-unused-vars
+90:30  Warning: 'request' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/auth/permissions.ts
+6:42  Warning: 'Permission' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/auth/roles.ts
+6:25  Warning: 'RolePermissions' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/auth/users.ts
+98:11  Warning: 'password' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./lib/cache.ts
+12:41  Warning: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/27) ...
+   Generating static pages (6/27) 
+   Generating static pages (13/27) 
+   Generating static pages (20/27) 
+ ✓ Generating static pages (27/27)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    11.1 kB         264 kB
+├ ○ /_not-found                          990 B           107 kB
+├ ○ /access-denied                       190 B           131 kB
+├ ○ /achievements                        2.71 kB         235 kB
+├ ƒ /api/achievements                    167 B           106 kB
+├ ƒ /api/auth/[...nextauth]              167 B           106 kB
+├ ƒ /api/departments                     167 B           106 kB
+├ ƒ /api/employees                       167 B           106 kB
+├ ƒ /api/health                          167 B           106 kB
+├ ƒ /api/kpi-updates                     167 B           106 kB
+├ ƒ /api/kpis                            167 B           106 kB
+├ ƒ /api/kpis/[id]                       167 B           106 kB
+├ ƒ /api/tasks                           167 B           106 kB
+├ ○ /approvals                           1.45 kB         132 kB
+├ ○ /create-kpi                          30.3 kB         161 kB
+├ ○ /data-sources                        1.8 kB          132 kB
+├ ○ /department-rankings                 1.93 kB         239 kB
+├ ○ /employee-rankings                   2.17 kB         133 kB
+├ ○ /import-mapping                      1.47 kB         132 kB
+├ ○ /kpi-monitoring                      190 B           131 kB
+├ ○ /kpi-tracking-board                  18.9 kB         149 kB
+├ ƒ /kpis/[id]                           3.11 kB         134 kB
+├ ○ /live-kpi-tracking                   190 B           131 kB
+├ ○ /login                               2.38 kB         119 kB
+├ ○ /logout                              419 B           109 kB
+├ ○ /reports                             2.72 kB         250 kB
+├ ○ /settings                            1.81 kB         132 kB
+└ ○ /task-tracking                       2.61 kB         235 kB
++ First Load JS shared by all            106 kB
+  ├ chunks/1517-91863ec712d52abf.js      50.7 kB
+  ├ chunks/4bd1b696-ed5529c626d4c813.js  53 kB
+  └ other shared chunks (total)          2 kB
+
+
+ƒ Middleware                             96.1 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

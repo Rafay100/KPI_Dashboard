@@ -1,0 +1,33 @@
+
+> custom-kpi-dashboard@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./components/charts/LazyCharts.tsx:25:3
+Type error: Argument of type '() => Promise<(({ data }: PerformanceTrendChartProps) => JSX.Element) | ComponentClass<ChartProps, any> | FunctionComponent<...> | ComponentModule<...>>' is not assignable to parameter of type 'DynamicOptions<ChartProps> | Loader<ChartProps>'.
+  Type '() => Promise<(({ data }: PerformanceTrendChartProps) => JSX.Element) | ComponentClass<ChartProps, any> | FunctionComponent<...> | ComponentModule<...>>' is not assignable to type '() => LoaderComponent<ChartProps>'.
+    Type 'Promise<(({ data }: PerformanceTrendChartProps) => Element) | ComponentClass<ChartProps, any> | FunctionComponent<ChartProps> | ComponentModule<...>>' is not assignable to type 'LoaderComponent<ChartProps>'.
+      Type '(({ data }: PerformanceTrendChartProps) => Element) | ComponentClass<ChartProps, any> | FunctionComponent<ChartProps> | ComponentModule<...>' is not assignable to type 'ComponentType<ChartProps> | ComponentModule<ChartProps>'.
+        Type '({ data }: PerformanceTrendChartProps) => Element' is not assignable to type 'ComponentType<ChartProps> | ComponentModule<ChartProps>'.
+          Type '({ data }: PerformanceTrendChartProps) => Element' is not assignable to type 'FunctionComponent<ChartProps>'.
+            Types of parameters '__0' and 'props' are incompatible.
+              Type 'ChartProps' is not assignable to type 'PerformanceTrendChartProps'.
+                Types of property 'data' are incompatible.
+                  Type 'Record<string, string | number>[]' is not assignable to type '{ month: string; performance: number; target: number; }[]'.
+                    Type 'Record<string, string | number>' is missing the following properties from type '{ month: string; performance: number; target: number; }': month, performance, target
+
+[0m [90m 23 |[39m [90m// Lazy load all chart components with dynamic imports[39m[0m
+[0m [90m 24 |[39m [36mexport[39m [36mconst[39m [33mLazyPerformanceTrendChart[39m [33m=[39m dynamic[33m<[39m[33mChartProps[39m[33m>[39m([0m
+[0m[31m[1m>[22m[39m[90m 25 |[39m   () [33m=>[39m [36mimport[39m([32m'./PerformanceTrendChart'[39m)[33m.[39mthen(mod [33m=>[39m mod[33m.[39m[33mPerformanceTrendChart[39m)[33m,[39m[0m
+[0m [90m    |[39m   [31m[1m^[22m[39m[0m
+[0m [90m 26 |[39m   {[0m
+[0m [90m 27 |[39m     loading[33m:[39m [33mChartLoader[39m[33m,[39m[0m
+[0m [90m 28 |[39m     ssr[33m:[39m [36mfalse[39m[0m
+Static worker exited with code: 1 and signal: null

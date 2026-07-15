@@ -1,0 +1,9 @@
+Name,department_name,description,department_manager_name,employee_count,average_kpi_score,total_active_kpis,completed_kpis,missed_kpis,at_risk_kpis,overall_department_score,performance_trend,created_at,updated_at
+Engineering,Engineering,Software development and technical operations,John Smith,15,87.8,45,32,3,10,87.8,up,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Sales,Sales,Revenue generation and client acquisition,Sarah Johnson,12,89.2,35,28,2,5,89.2,up,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Marketing,Marketing,Brand management and digital marketing,Michael Chen,10,91.5,28,24,1,3,91.5,up,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+HR,HR,Human resources and talent management,Emily Davis,8,86.4,18,14,2,2,86.4,stable,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Product,Product,Product strategy and development,Robert Kim,10,88.9,22,18,1,3,88.9,up,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Customer Success,Customer Success,Client support and retention,Lisa Martinez,12,90.3,30,26,0,4,90.3,up,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Finance,Finance,Financial planning and analysis,David Chang,6,85.7,12,10,1,1,85.7,stable,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z
+Operations,Operations,Business operations and logistics,Amanda Brooks,8,84.2,16,12,2,2,84.2,stable,2026-07-08T12:00:00.000Z,2026-07-08T12:00:00.000Z

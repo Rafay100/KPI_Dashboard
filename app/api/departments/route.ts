@@ -1,0 +1,77 @@
+import { NextResponse } from "next/server";
+import { airtableService } from "@/services/airtable.service";
+import { DepartmentSchema } from "@/schemas/validation";
+import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
+import { serverCache, CACHE_KEYS } from "@/lib/cache";
+import type { APIResponse, Department } from "@/types/models";
+
+/**
+ * GET /api/departments
+ * Fetch all departments from Airtable (with server-side caching)
+ */
+export async function GET() {
+  try {
+    // Validate environment variables
+    const envCheck = validateEnvVars();
+    if (!envCheck.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Server configuration error",
+          message: `Missing environment variables: ${envCheck.missing.join(", ")}`,
+        } as APIResponse<null>,
+        { status: 500 }
+      );
+    }
+
+    // Check cache first (5 minute TTL)
+    const cachedDepartments = serverCache.get<Department[]>(CACHE_KEYS.DEPARTMENTS, 5 * 60 * 1000);
+    if (cachedDepartments) {
+      console.log("✅ Serving Departments from cache");
+      return NextResponse.json(
+        {
+          success: true,
+          data: cachedDepartments,
+          message: `Successfully fetched ${cachedDepartments.length} departments (cached)`,
+        } as APIResponse<Department[]>,
+        { status: 200 }
+      );
+    }
+
+    // Fetch departments from Airtable
+    console.log("🔄 Fetching Departments from Airtable...");
+    const departments = await airtableService.getDepartments();
+
+    // Validate data and filter out invalid records
+    const validatedDepartments = departments
+      .map((department) => {
+        const result = DepartmentSchema.safeParse(department);
+        return result.success ? result.data : null;
+      })
+      .filter((dept): dept is Department => dept !== null);
+
+    // Cache the result
+    serverCache.set(CACHE_KEYS.DEPARTMENTS, validatedDepartments);
+    console.log(`✅ Cached ${validatedDepartments.length} Departments`);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: validatedDepartments,
+        message: `Successfully fetched ${validatedDepartments.length} departments`,
+      } as APIResponse<Department[]>,
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error in GET /api/departments:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: cleanErrorMessage(error),
+        message: "Failed to fetch departments",
+      } as APIResponse<null>,
+      { status: 500 }
+    );
+  }
+}

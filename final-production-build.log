@@ -1,0 +1,23 @@
+
+> custom-kpi-dashboard@0.1.0 build
+> next build
+
+   ▲ Next.js 15.1.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./components/dashboard/LoadingSkeletons.tsx:3:10
+Type error: Module '"@/components/ui/Skeleton"' has no exported member 'Skeleton'.
+
+[0m [90m 1 |[39m [32m"use client"[39m[33m;[39m[0m
+[0m [90m 2 |[39m[0m
+[0m[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { [33mSkeleton[39m } [36mfrom[39m [32m"@/components/ui/Skeleton"[39m[33m;[39m[0m
+[0m [90m   |[39m          [31m[1m^[22m[39m[0m
+[0m [90m 4 |[39m[0m
+[0m [90m 5 |[39m [90m/**[39m[0m
+[0m [90m 6 |[39m [90m * Reusable loading skeleton components for consistent loading states[39m[0m
+Static worker exited with code: 1 and signal: null
