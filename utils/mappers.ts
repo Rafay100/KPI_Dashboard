@@ -48,6 +48,12 @@ export function mapKPIFromAirtable(
     dueDate: formatDateISO(safeString(fields["Due Date"])),
     lastUpdated: formatDateISO(safeString(fields["Last Updated"] || fields["Modified"])) || new Date().toISOString(),
     createdAt: formatDateISO(safeString(fields["Created Date"] || fields["Created"])) || new Date().toISOString(),
+    code: safeString(fields["ID"] || fields["id"]),
+    category: safeString(fields["Category"] || fields["category"]),
+    team: safeString(fields["Team"] || fields["team"]),
+    owner: safeString(fields["Owner"] || fields["owner"]),
+    frequency: safeString(fields["Frequency"] || fields["frequency"]),
+    unit: safeString(fields["Unit"] || fields["unit"]),
   };
 }
 
@@ -74,6 +80,7 @@ export function mapEmployeeFromAirtable(
     avatar: safeString(getFieldValue(fields, ["Avatar", "Photo"])),
     createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At"]))) || new Date().toISOString(),
     lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At"]))) || new Date().toISOString(),
+    manager: safeString(getFieldValue(fields, ["Manager", mapping.manager])),
   };
 }
 

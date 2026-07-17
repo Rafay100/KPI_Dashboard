@@ -110,3 +110,47 @@ export function useAchievements() {
     refetch: query.refetch,
   };
 }
+
+export interface KPIHistoryItem {
+  id: string;
+  kpiId: string;
+  kpiName: string;
+  previousValue: number;
+  newValue: number;
+  previousScore: number;
+  newScore: number;
+  statusAfterUpdate: string;
+  updatedBy: string;
+  approvalStatus: string;
+  updateDate: string;
+}
+
+export function useKPIHistory(kpiId: string) {
+  return useQuery<KPIHistoryItem[]>({
+    queryKey: ["kpi-history", kpiId],
+    queryFn: async () => {
+      if (!kpiId) return [];
+      const response = await fetch(`${API_BASE}/kpis/${kpiId}/history`);
+      if (!response.ok) throw new Error("Failed to fetch KPI history");
+      const result: APIResponse<KPIHistoryItem[]> = await response.json();
+      return result.data || [];
+    },
+    enabled: !!kpiId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useEmployeeHistory(employeeId: string) {
+  return useQuery<KPIHistoryItem[]>({
+    queryKey: ["employee-history", employeeId],
+    queryFn: async () => {
+      if (!employeeId) return [];
+      const response = await fetch(`${API_BASE}/employees/${employeeId}/history`);
+      if (!response.ok) throw new Error("Failed to fetch Employee history");
+      const result: APIResponse<KPIHistoryItem[]> = await response.json();
+      return result.data || [];
+    },
+    enabled: !!employeeId,
+    staleTime: 2 * 60 * 1000,
+  });
+}

@@ -79,6 +79,22 @@ function sanitizeFieldsForAirtable(fields: Record<string, unknown>): Record<stri
     "dueDate",
     "LastUpdated",
     "lastUpdated",
+    "ID",
+    "id",
+    "Category",
+    "category",
+    "Team",
+    "team",
+    "Owner",
+    "owner",
+    "Frequency",
+    "frequency",
+    "Unit",
+    "unit",
+    "Target Value",
+    "target",
+    "Actual Value",
+    "actual"
   ]);
 
   return Object.fromEntries(

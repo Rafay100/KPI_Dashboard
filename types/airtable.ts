@@ -18,6 +18,12 @@ export interface AirtableKPIFields extends FieldSet {
   Score: number;
   "Due Date": string;
   "Last Updated"?: string;
+  ID?: string;
+  Category?: string;
+  Team?: string;
+  Owner?: string;
+  Frequency?: string;
+  Unit?: string;
 }
 
 export interface AirtableEmployeeFields extends FieldSet {

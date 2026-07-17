@@ -16,22 +16,32 @@ import {
   Trophy,
   FileText,
   Database,
-  Settings
+  Settings,
+  ClipboardCheck,
+  BarChart3,
+  Layers
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "executive-overview": LayoutDashboard,
   "kpi-tracking-board": Target,
+  "tracking-boards": Target,
   "live-kpi-tracking": Activity,
   "create-kpi": PlusCircle,
   "employee-rankings": Users,
   "department-rankings": Building2,
   "kpi-monitoring": Eye,
   "task-tracking": CheckSquare,
+  "tasks": CheckSquare,
   "achievements": Trophy,
   "reports": FileText,
   "data-sources": Database,
   "settings": Settings,
+  "employees": Users,
+  "approvals": ClipboardCheck,
+  "employee-analytics": BarChart3,
+  "department-leaderboard": Trophy,
+  "department-analytics": Layers,
 };
 
 export function Sidebar() {

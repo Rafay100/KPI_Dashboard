@@ -23,6 +23,12 @@ export const KPISchema = z.object({
   dueDate: z.string(),
   lastUpdated: z.string(),
   createdAt: z.string(),
+  code: z.string().optional(),
+  category: z.string().optional(),
+  team: z.string().optional(),
+  owner: z.string().optional(),
+  frequency: z.string().optional(),
+  unit: z.string().optional(),
 });
 
 export const EmployeeSchema = z.object({
@@ -39,6 +45,7 @@ export const EmployeeSchema = z.object({
   avatar: z.string().optional(),
   createdAt: z.string(),
   lastUpdated: z.string(),
+  manager: z.string().optional(),
 });
 
 export const DepartmentSchema = z.object({
@@ -58,7 +65,7 @@ export const TaskSchema = z.object({
   id: z.string(),
   taskName: z.string().min(1, "Task name is required"),
   description: z.string().optional(),
-  status: z.enum(["todo", "in-progress", "completed", "blocked"]),
+  status: z.enum(["todo", "in-progress", "completed", "blocked", "not-started", "planned", "under-review", "archived"]),
   priority: z.enum(["low", "medium", "high", "critical"]),
   assignedTo: z.string().min(1, "Assigned to is required"),
   assignedToId: z.string().min(1, "Assigned to ID is required"),
@@ -98,6 +105,12 @@ export const CreateKPISchema = z.object({
     .enum(["not-started", "in-progress", "at-risk", "completed", "overdue"])
     .default("not-started"),
   dueDate: z.string(),
+  code: z.string().optional(),
+  category: z.string().optional(),
+  team: z.string().optional(),
+  owner: z.string().optional(),
+  frequency: z.string().optional(),
+  unit: z.string().optional(),
 });
 
 export const UpdateKPISchema = z.object({

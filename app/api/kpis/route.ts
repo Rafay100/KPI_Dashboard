@@ -103,6 +103,12 @@ export async function POST(request: Request) {
       Status: validated.status || "not-started",
       DueDate: validated.dueDate,
       LastUpdated: new Date().toISOString(),
+      Category: validated.category || "",
+      Team: validated.team || "",
+      Owner: validated.owner || "",
+      Frequency: validated.frequency || "",
+      Unit: validated.unit || "",
+      ID: validated.code || "",
     };
 
     const recordId = await airtableService.createRecord("KPIs", airtableFields as Partial<FieldSet>);

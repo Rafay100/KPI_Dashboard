@@ -16,6 +16,12 @@ export interface KPI {
   dueDate: string;
   lastUpdated: string;
   createdAt: string;
+  code?: string;
+  category?: string;
+  team?: string;
+  owner?: string;
+  frequency?: string;
+  unit?: string;
 }
 
 export interface Employee {
@@ -32,6 +38,7 @@ export interface Employee {
   avatar?: string;
   createdAt: string;
   lastUpdated: string;
+  manager?: string;
 }
 
 export interface Department {
@@ -51,7 +58,7 @@ export interface Task {
   id: string;
   taskName: string;
   description: string;
-  status: "todo" | "in-progress" | "completed" | "blocked";
+  status: "todo" | "in-progress" | "completed" | "blocked" | "not-started" | "planned" | "under-review" | "archived";
   priority: "low" | "medium" | "high" | "critical";
   assignedTo: string;
   assignedToId: string;
