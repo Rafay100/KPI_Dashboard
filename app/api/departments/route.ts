@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { airtableService } from "@/services/airtable.service";
+import airtableClient from "@/services/airtable.client";
 import { DepartmentSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -75,3 +76,107 @@ export async function GET() {
     );
   }
 }
+
+/**
+ * POST /api/departments
+ * Create a new department with duplicate check validation
+ */
+export async function POST(request: Request) {
+  try {
+    const envCheck = validateEnvVars();
+    if (!envCheck.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Server configuration error",
+          message: `Missing environment variables: ${envCheck.missing.join(", ")}`,
+        } as APIResponse<null>,
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
+    const { departmentName, description, headOfDepartment } = body;
+
+    if (!departmentName || String(departmentName).trim() === "") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Department Name is required",
+        } as APIResponse<null>,
+        { status: 400 }
+      );
+    }
+
+    const base = airtableClient.getBase();
+    const tableName = await airtableClient.getTableName("departments");
+
+    // Fetch existing to check for duplicate names (case-insensitive)
+    const existingRecords = await base(tableName).select().all();
+    const isDuplicate = existingRecords.some((record) => {
+      const name = String(record.fields["Department Name"] || "").toLowerCase().trim();
+      return name === String(departmentName).toLowerCase().trim();
+    });
+
+    if (isDuplicate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Department "${departmentName}" already exists`,
+        } as APIResponse<null>,
+        { status: 400 }
+      );
+    }
+
+    // Create the record in Airtable
+    const fields: Record<string, any> = {
+      "Department Name": departmentName.trim(),
+    };
+    if (description) fields["Description"] = description;
+    if (headOfDepartment) fields["Manager"] = headOfDepartment; // Field is "Manager" in Airtable schema for Departments
+
+    // Add ID field (e.g. DEPT008)
+    const maxId = existingRecords.reduce((max, rec) => {
+      const idStr = String(rec.fields["ID"] || "");
+      const match = idStr.match(/\d+/);
+      if (match) {
+        const val = parseInt(match[0], 10);
+        return val > max ? val : max;
+      }
+      return max;
+    }, 0);
+    const newId = `DEPT${String(maxId + 1).padStart(3, "0")}`;
+    fields["ID"] = newId;
+
+    const newRecord = await base(tableName).create(fields);
+
+    // Invalidate cache
+    serverCache.invalidate(CACHE_KEYS.DEPARTMENTS);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: newRecord.id,
+          departmentName: fields["Department Name"],
+          description: fields["Description"] || "",
+          headOfDepartment: fields["Manager"] || "",
+          createdAt: new Date().toISOString(),
+        },
+        message: "Department created successfully",
+      } as APIResponse<any>,
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error in POST /api/departments:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: cleanErrorMessage(error),
+        message: "Failed to create department",
+      } as APIResponse<null>,
+      { status: 500 }
+    );
+  }
+}
+

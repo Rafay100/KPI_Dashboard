@@ -37,6 +37,14 @@ export function useDashboardData() {
       });
       if (!response.ok) throw new Error("Failed to fetch dashboard data");
       const result: APIResponse<DashboardData> = await response.json();
+      
+      // Dispatch subtle sync notification event
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("dashboard-synced", { 
+          detail: { time: new Date().toLocaleTimeString() } 
+        }));
+      }
+
       return result.data || {
         kpis: [],
         employees: [],
@@ -49,6 +57,7 @@ export function useDashboardData() {
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
     refetchOnWindowFocus: false, // Don't refetch on every window focus
+    refetchInterval: 30000, // Background poll every 30 seconds
   });
 }
 

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { GlobalFilterProvider } from "@/providers/GlobalFilterProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,14 +15,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  }: Readonly<{
+    children: React.ReactNode;
+  }>) {
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
         <ErrorBoundary>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <GlobalFilterProvider>
+              {children}
+            </GlobalFilterProvider>
+          </QueryProvider>
         </ErrorBoundary>
       </body>
     </html>
