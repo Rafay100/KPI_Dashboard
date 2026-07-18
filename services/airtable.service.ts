@@ -102,47 +102,32 @@ function sanitizeFieldsForAirtable(fields: Record<string, unknown>): Record<stri
   );
 }
 
-/**
- * Airtable Service
- * Provides data access methods for all entities
- */
+import { AdapterFactory } from "@/adapters";
 
+/**
+ * Airtable Service (Redirected to use Adapter Factory)
+ * Acts as the primary backend data coordinator, now routing all queries
+ * dynamically through the configured adapter (e.g. Google Sheets).
+ */
 export class AirtableService {
+  private async getAdapter() {
+    const adapter = AdapterFactory.createFromEnv();
+    await adapter.connect();
+    return adapter;
+  }
+
   /**
    * Fetch all dashboard data in parallel - OPTIMIZED
-   * This is called by the /api/dashboard endpoint for maximum performance
    */
   async getAllDashboardData() {
     try {
-      const base = airtableClient.getBase();
-
-      // Get all table names in parallel
-      const [kpiTableName, employeeTableName, departmentTableName, taskTableName, achievementTableName] =
-        await Promise.all([
-          airtableClient.getTableName("kpis"),
-          airtableClient.getTableName("employees"),
-          airtableClient.getTableName("departments"),
-          airtableClient.getTableName("tasks"),
-          airtableClient.getTableName("achievements"),
-        ]);
-
-      // Fetch all data in parallel
-      const [kpiRecords, employeeRecords, departmentRecords, taskRecords, achievementRecords] =
-        await Promise.all([
-          base<AirtableKPIFields>(kpiTableName).select().all().catch(() => []),
-          base<AirtableEmployeeFields>(employeeTableName).select().all().catch(() => []),
-          base<AirtableDepartmentFields>(departmentTableName).select().all().catch(() => []),
-          base<AirtableTaskFields>(taskTableName).select().all().catch(() => []),
-          base<AirtableAchievementFields>(achievementTableName).select().all().catch(() => []),
-        ]);
-
-      // Map all data in parallel
+      const adapter = await this.getAdapter();
       const [kpis, employees, departments, tasks, achievements] = await Promise.all([
-        Promise.resolve(kpiRecords.map((record) => mapKPIFromAirtable(record))),
-        Promise.resolve(employeeRecords.map((record) => mapEmployeeFromAirtable(record))),
-        Promise.resolve(departmentRecords.map((record) => mapDepartmentFromAirtable(record))),
-        Promise.resolve(taskRecords.map((record) => mapTaskFromAirtable(record))),
-        Promise.resolve(achievementRecords.map((record) => mapAchievementFromAirtable(record))),
+        adapter.fetchKPIs(),
+        adapter.fetchEmployees(),
+        adapter.fetchDepartments(),
+        adapter.fetchTasks(),
+        adapter.fetchAchievements(),
       ]);
 
       // Update local fallback data
@@ -152,11 +137,15 @@ export class AirtableService {
       localFallbackData.tasks = tasks;
       localFallbackData.achievements = achievements;
 
+      try {
+        await adapter.disconnect();
+      } catch (err) {
+        // Ignored
+      }
+
       return { kpis, employees, departments, tasks, achievements };
     } catch (error) {
-      console.error("Error fetching all dashboard data:", error);
-
-      // Return fallback data if available
+      console.error("Error fetching all dashboard data via adapter:", error);
       return {
         kpis: localFallbackData.kpis,
         employees: localFallbackData.employees,
@@ -172,19 +161,14 @@ export class AirtableService {
    */
   async getKPIs(): Promise<KPI[]> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("kpis");
-
-      const records = await base<AirtableKPIFields>(tableName).select().all();
-      const mapped = records.map((record) => mapKPIFromAirtable(record));
-      localFallbackData.kpis = mapped;
-      return mapped;
+      const adapter = await this.getAdapter();
+      const kpis = await adapter.fetchKPIs();
+      localFallbackData.kpis = kpis;
+      try { await adapter.disconnect(); } catch {}
+      return kpis;
     } catch (error) {
       console.error("Error fetching KPIs:", error);
-      if (localFallbackData.kpis.length > 0) {
-        return localFallbackData.kpis;
-      }
-      return [];
+      return localFallbackData.kpis;
     }
   }
 
@@ -193,12 +177,8 @@ export class AirtableService {
    */
   async getKPIById(id: string): Promise<KPI | null> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("kpis");
-
-      const record = await base<AirtableKPIFields>(tableName).find(id);
-
-      return mapKPIFromAirtable(record);
+      const kpis = await this.getKPIs();
+      return kpis.find(k => k.id === id) || null;
     } catch (error) {
       console.error(`Error fetching KPI ${id}:`, error);
       return null;
@@ -210,19 +190,14 @@ export class AirtableService {
    */
   async getEmployees(): Promise<Employee[]> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("employees");
-
-      const records = await base<AirtableEmployeeFields>(tableName).select().all();
-      const mapped = records.map((record) => mapEmployeeFromAirtable(record));
-      localFallbackData.employees = mapped;
-      return mapped;
+      const adapter = await this.getAdapter();
+      const employees = await adapter.fetchEmployees();
+      localFallbackData.employees = employees;
+      try { await adapter.disconnect(); } catch {}
+      return employees;
     } catch (error) {
       console.error("Error fetching Employees:", error);
-      if (localFallbackData.employees.length > 0) {
-        return localFallbackData.employees;
-      }
-      return [];
+      return localFallbackData.employees;
     }
   }
 
@@ -231,12 +206,8 @@ export class AirtableService {
    */
   async getEmployeeById(id: string): Promise<Employee | null> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("employees");
-
-      const record = await base<AirtableEmployeeFields>(tableName).find(id);
-
-      return mapEmployeeFromAirtable(record);
+      const employees = await this.getEmployees();
+      return employees.find(e => e.id === id) || null;
     } catch (error) {
       console.error(`Error fetching Employee ${id}:`, error);
       return null;
@@ -248,19 +219,14 @@ export class AirtableService {
    */
   async getDepartments(): Promise<Department[]> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("departments");
-
-      const records = await base<AirtableDepartmentFields>(tableName).select().all();
-      const mapped = records.map((record) => mapDepartmentFromAirtable(record));
-      localFallbackData.departments = mapped;
-      return mapped;
+      const adapter = await this.getAdapter();
+      const departments = await adapter.fetchDepartments();
+      localFallbackData.departments = departments;
+      try { await adapter.disconnect(); } catch {}
+      return departments;
     } catch (error) {
       console.error("Error fetching Departments:", error);
-      if (localFallbackData.departments.length > 0) {
-        return localFallbackData.departments;
-      }
-      return [];
+      return localFallbackData.departments;
     }
   }
 
@@ -269,12 +235,8 @@ export class AirtableService {
    */
   async getDepartmentById(id: string): Promise<Department | null> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("departments");
-
-      const record = await base<AirtableDepartmentFields>(tableName).find(id);
-
-      return mapDepartmentFromAirtable(record);
+      const departments = await this.getDepartments();
+      return departments.find(d => d.id === id) || null;
     } catch (error) {
       console.error(`Error fetching Department ${id}:`, error);
       return null;
@@ -286,19 +248,14 @@ export class AirtableService {
    */
   async getTasks(): Promise<Task[]> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("tasks");
-
-      const records = await base<AirtableTaskFields>(tableName).select().all();
-      const mapped = records.map((record) => mapTaskFromAirtable(record));
-      localFallbackData.tasks = mapped;
-      return mapped;
+      const adapter = await this.getAdapter();
+      const tasks = await adapter.fetchTasks();
+      localFallbackData.tasks = tasks;
+      try { await adapter.disconnect(); } catch {}
+      return tasks;
     } catch (error) {
       console.error("Error fetching Tasks:", error);
-      if (localFallbackData.tasks.length > 0) {
-        return localFallbackData.tasks;
-      }
-      return [];
+      return localFallbackData.tasks;
     }
   }
 
@@ -307,12 +264,8 @@ export class AirtableService {
    */
   async getTaskById(id: string): Promise<Task | null> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("tasks");
-
-      const record = await base<AirtableTaskFields>(tableName).find(id);
-
-      return mapTaskFromAirtable(record);
+      const tasks = await this.getTasks();
+      return tasks.find(t => t.id === id) || null;
     } catch (error) {
       console.error(`Error fetching Task ${id}:`, error);
       return null;
@@ -324,33 +277,21 @@ export class AirtableService {
    */
   async getAchievements(): Promise<Achievement[]> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("achievements");
-
-      const records = await base<AirtableAchievementFields>(tableName).select().all();
-      const mapped = records.map((record) => mapAchievementFromAirtable(record));
-      localFallbackData.achievements = mapped;
-      return mapped;
+      const adapter = await this.getAdapter();
+      const achievements = await adapter.fetchAchievements();
+      localFallbackData.achievements = achievements;
+      try { await adapter.disconnect(); } catch {}
+      return achievements;
     } catch (error) {
       console.error("Error fetching Achievements:", error);
-      if (localFallbackData.achievements.length > 0) {
-        return localFallbackData.achievements;
-      }
-      return [];
+      return localFallbackData.achievements;
     }
   }
 
-  /**
-   * Get Achievement by ID
-   */
   async getAchievementById(id: string): Promise<Achievement | null> {
     try {
-      const base = airtableClient.getBase();
-      const tableName = await airtableClient.getTableName("achievements");
-
-      const record = await base<AirtableAchievementFields>(tableName).find(id);
-
-      return mapAchievementFromAirtable(record);
+      const achievements = await this.getAchievements();
+      return achievements.find(a => a.id === id) || null;
     } catch (error) {
       console.error(`Error fetching Achievement ${id}:`, error);
       return null;

@@ -144,9 +144,23 @@ Create a `.env.local` file in the root directory:
 AIRTABLE_API_KEY=pat_your_personal_access_token_here
 AIRTABLE_BASE_ID=appYourBaseIdHere
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# To use Google Sheets as data source:
+DATA_SOURCE=google-sheets
+GOOGLE_SHEET_ID=your_google_sheet_id_here
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your_service_account_email@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC..."
 ```
 
+### Google Sheets Setup
+To point the application at a different Google Sheet in the future:
+1. **Share the Sheet:** Open your target Google Sheet and share it with your Google Service Account email (e.g., `your-service-account@...iam.gserviceaccount.com`) as a **Viewer** or **Editor**.
+2. **Obtain Sheet ID:** Copy the Sheet ID from the URL of your browser (the alphanumeric string between `/d/` and `/edit` in the address bar).
+3. **Update `.env.local`:** Update `GOOGLE_SHEET_ID` with the new ID.
+4. **Ensure Tabs Exist:** The new sheet must contain tabs named exactly: `KPIs`, `Employees`, `Departments`, `Tasks`, and `Achievements` with headers in the first row matching the normalized field names.
+
 ---
+
 
 ## 8. Installation & Local Development
 ```bash

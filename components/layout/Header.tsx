@@ -90,7 +90,7 @@ export function Header() {
           {/* Sync Status Indicator */}
           <div className="hidden sm:flex items-center space-x-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-2.5 py-0.5 text-[10px] text-green-400 font-semibold">
             <CheckCircle className="h-3 w-3" />
-            <span>Airtable Live</span>
+            <span>Google Sheets Live</span>
           </div>
 
           {showSyncFlash && (

@@ -712,7 +712,7 @@ function CalendarContent() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-400">
               <Database className="h-3 w-3" />
-              Airtable Live
+              Google Sheets Live
             </div>
             <button onClick={handleRefresh} disabled={refreshing}
               className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50">

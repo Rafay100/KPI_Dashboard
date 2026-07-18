@@ -103,7 +103,9 @@ export class AdapterFactory {
    */
   static createFromEnv(): BaseAdapter {
     const sourceType =
-      (process.env.DATA_SOURCE_TYPE as DataSourceType) || "airtable";
+      (process.env.DATA_SOURCE as DataSourceType) ||
+      (process.env.DATA_SOURCE_TYPE as DataSourceType) ||
+      "airtable";
 
     logInfo(
       this.SERVICE_NAME,

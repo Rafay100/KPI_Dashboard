@@ -321,7 +321,7 @@ function DepartmentRankingsContent() {
           <div className="flex flex-col items-end text-xs text-gray-400 space-y-1">
             <div className="flex items-center space-x-1.5 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 text-emerald-400 font-semibold shadow-sm">
               <Database className="h-3 w-3" />
-              <span>Airtable Live Sync</span>
+              <span>Google Sheets Live Sync</span>
             </div>
             {lastSynced && <span className="text-[10px] text-gray-500 mt-0.5">Synced at {lastSynced}</span>}
           </div>
