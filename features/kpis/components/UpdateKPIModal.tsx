@@ -51,7 +51,7 @@ export function UpdateKPIModal({ kpi, isOpen, onClose }: UpdateKPIModalProps) {
         throw new Error("Failed to update KPI");
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["kpis"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update KPI");

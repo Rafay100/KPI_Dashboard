@@ -412,9 +412,42 @@ export default function SettingsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch Airtable Settings
-      const settingsRes = await fetch("/api/settings");
-      const settingsData = await settingsRes.json();
+      const [
+        settingsRes,
+        auditRes,
+        valRes,
+        alertsRes,
+        deptRes,
+        teamsRes,
+        usersRes
+      ] = await Promise.all([
+        fetch("/api/settings"),
+        fetch("/api/settings/audit-logs"),
+        fetch("/api/settings/validation"),
+        fetch("/api/settings/alerts"),
+        fetch("/api/departments"),
+        fetch("/api/teams"),
+        fetch("/api/users")
+      ]);
+
+      const [
+        settingsData,
+        auditData,
+        valData,
+        alertsData,
+        deptData,
+        teamsData,
+        usersData
+      ] = await Promise.all([
+        settingsRes.json(),
+        auditRes.json(),
+        valRes.json(),
+        alertsRes.json(),
+        deptRes.json(),
+        teamsRes.json(),
+        usersRes.json()
+      ]);
+
       if (settingsData.success && settingsData.data?.map) {
         const map = settingsData.data.map;
         const mappedSettings = {
@@ -513,38 +546,20 @@ export default function SettingsPage() {
         }
       }
 
-      // Fetch Audit Logs
-      const auditRes = await fetch("/api/settings/audit-logs");
-      const auditData = await auditRes.json();
       if (auditData.success) {
         setAuditLogs(auditData.data || []);
       }
 
-      // Fetch validation scan issues
-      const valRes = await fetch("/api/settings/validation");
-      const valData = await valRes.json();
       if (valData.success) {
         setValidationIssues(valData.data || []);
       }
 
-      // Fetch system alerts
-      const alertsRes = await fetch("/api/settings/alerts");
-      const alertsData = await alertsRes.json();
       if (alertsData.success) {
         setAlerts(alertsData.data || []);
       }
 
-      // Load standard Org arrays
-      const deptRes = await fetch("/api/departments");
-      const deptData = await deptRes.json();
       if (deptData.success) setDepartments(deptData.data || []);
-
-      const teamsRes = await fetch("/api/teams");
-      const teamsData = await teamsRes.json();
       if (teamsData.success) setTeams(teamsData.data || []);
-
-      const usersRes = await fetch("/api/users");
-      const usersData = await usersRes.json();
       if (usersData.success) setUsers(usersData.data || []);
 
     } catch (error) {
