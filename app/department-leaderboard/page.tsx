@@ -71,11 +71,16 @@ function DepartmentLeaderboardContent() {
   const leaderboardItems = useMemo((): LeaderboardItem[] => {
     const list = departments.map((dept) => {
       const deptEmployees = employees.filter(
-        (e) => e.department?.toLowerCase() === dept.departmentName?.toLowerCase()
+        (e) => 
+          e.department?.toLowerCase() === dept.departmentName?.toLowerCase() ||
+          e.department?.toLowerCase() === dept.id?.toLowerCase() ||
+          e.departmentId?.toLowerCase() === dept.id?.toLowerCase()
       );
       
       const deptKPIs = kpis.filter(
-        (k) => k.departmentId?.toLowerCase() === dept.departmentName?.toLowerCase()
+        (k) => 
+          k.departmentId?.toLowerCase() === dept.departmentName?.toLowerCase() ||
+          k.departmentId?.toLowerCase() === dept.id?.toLowerCase()
       );
 
       // Teams count

@@ -17,11 +17,32 @@ import { safeString, safeNumber, formatDateISO } from "./helpers";
 import { AIRTABLE_FIELD_MAPPINGS } from "@/config/airtable-field-mappings";
 
 function getFieldValue(fields: Record<string, unknown>, candidates: string[]): unknown {
+  if (!fields) return undefined;
+
+  // 1. Direct match first
   for (const candidate of candidates) {
-    if (candidate in fields && fields[candidate] !== undefined && fields[candidate] !== null) {
+    if (candidate && candidate in fields && fields[candidate] !== undefined && fields[candidate] !== null) {
       return fields[candidate];
     }
   }
+
+  // 2. Normalize fields keys to lowercase and remove spaces, underscores, hyphens
+  const normalize = (str: string) => str.toLowerCase().replace(/[\s_-]/g, "");
+
+  const normalizedFields: Record<string, unknown> = {};
+  for (const key of Object.keys(fields)) {
+    normalizedFields[normalize(key)] = fields[key];
+  }
+
+  // 3. Try to match normalized candidates
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normCandidate = normalize(candidate);
+    if (normCandidate in normalizedFields && normalizedFields[normCandidate] !== undefined && normalizedFields[normCandidate] !== null) {
+      return normalizedFields[normCandidate];
+    }
+  }
+
   return undefined;
 }
 
@@ -33,27 +54,27 @@ export function mapKPIFromAirtable(
 ): KPI {
   const fields = record.fields as Record<string, unknown>;
 
-  // Use ACTUAL Airtable column names
+  // Use ACTUAL Airtable column names with robust matching
   return {
     id: record.id,
-    kpiName: safeString(fields["KPI Name"]) || `KPI-${record.id.slice(0, 8)}`,
-    description: safeString(fields["Description"] || fields["Notes"]),
+    kpiName: safeString(getFieldValue(fields, ["KPI Name", "name", "Name", "title", "Title"])) || `KPI-${record.id.slice(0, 8)}`,
+    description: safeString(fields["Description"] || fields["Notes"] || fields["description"] || fields["notes"]),
     // Resolve department and employee references using possible field names
-    departmentId: safeString(getFieldValue(fields, ["Department ID", "Department", "Dept", "department"])),
-    employeeId: safeString(getFieldValue(fields, ["Employee ID", "Assigned Employee", "Employee", "assignedEmployee"])),
-    targetValue: safeNumber(getFieldValue(fields, ["Target Value", "target", "Target", "targetValue"])),
-    actualValue: safeNumber(getFieldValue(fields, ["Actual Value", "actual", "Actual", "actualValue"])),
-    status: normalizeKPIStatus(safeString(fields["Status"])),
-    score: safeNumber(fields["Score"] || fields["score"]),
-    dueDate: formatDateISO(safeString(fields["Due Date"])),
-    lastUpdated: formatDateISO(safeString(fields["Last Updated"] || fields["Modified"])) || new Date().toISOString(),
-    createdAt: formatDateISO(safeString(fields["Created Date"] || fields["Created"])) || new Date().toISOString(),
-    code: safeString(fields["ID"] || fields["id"]),
-    category: safeString(fields["Category"] || fields["category"]),
-    team: safeString(fields["Team"] || fields["team"]),
-    owner: safeString(fields["Owner"] || fields["owner"]),
-    frequency: safeString(fields["Frequency"] || fields["frequency"]),
-    unit: safeString(fields["Unit"] || fields["unit"]),
+    departmentId: safeString(getFieldValue(fields, ["Department ID", "Department", "Dept", "department", "department_id"])),
+    employeeId: safeString(getFieldValue(fields, ["Employee ID", "Assigned Employee", "Employee", "assignedEmployee", "owner_employee_id"])),
+    targetValue: safeNumber(getFieldValue(fields, ["Target Value", "target", "Target", "targetValue", "target_value"])),
+    actualValue: safeNumber(getFieldValue(fields, ["Actual Value", "actual", "Actual", "actualValue", "actual_value"])),
+    status: normalizeKPIStatus(safeString(getFieldValue(fields, ["Status", "status"]))),
+    score: safeNumber(getFieldValue(fields, ["Score", "score"])),
+    dueDate: formatDateISO(safeString(getFieldValue(fields, ["Due Date", "due_date"]))),
+    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Modified", "updated_at"]))) || new Date().toISOString(),
+    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created", "created_at"]))) || new Date().toISOString(),
+    code: safeString(getFieldValue(fields, ["ID", "id", "kpi_code"])),
+    category: safeString(getFieldValue(fields, ["Category", "category"])),
+    team: safeString(getFieldValue(fields, ["Team", "team", "team_id"])),
+    owner: safeString(getFieldValue(fields, ["Owner", "owner", "owner_employee_id"])),
+    frequency: safeString(getFieldValue(fields, ["Frequency", "frequency"])),
+    unit: safeString(getFieldValue(fields, ["Unit", "unit", "measurement_unit"])),
   };
 }
 
@@ -67,20 +88,20 @@ export function mapEmployeeFromAirtable(
   const mapping = AIRTABLE_FIELD_MAPPINGS.employees;
 
   return {
-    id: safeString(getFieldValue(fields, ["ID", mapping.id])) || record.id,
-    name: safeString(getFieldValue(fields, ["Name", mapping.name, "Employee Name"])) || "Unknown Employee",
-    email: safeString(getFieldValue(fields, ["Email", mapping.email])),
-    department: safeString(getFieldValue(fields, ["Department", mapping.department])),
-    departmentId: safeString(getFieldValue(fields, ["Department", "Department ID"])),
-    team: safeString(getFieldValue(fields, ["Team", "Team Name"])),
-    position: safeString(getFieldValue(fields, ["Position", "Role", "Job Title"])),
-    overallScore: safeNumber(getFieldValue(fields, ["KPI Score", mapping.kpiScore, "Overall Score"])),
-    totalKPIs: safeNumber(getFieldValue(fields, ["Total KPIs", "KPIs Assigned"])),
-    completedKPIs: safeNumber(getFieldValue(fields, ["Completed KPIs", "KPIs Completed"])),
-    avatar: safeString(getFieldValue(fields, ["Avatar", "Photo"])),
-    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At"]))) || new Date().toISOString(),
-    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At"]))) || new Date().toISOString(),
-    manager: safeString(getFieldValue(fields, ["Manager", mapping.manager])),
+    id: safeString(getFieldValue(fields, ["ID", mapping.id, "id"])) || record.id,
+    name: safeString(getFieldValue(fields, ["Name", mapping.name, "Employee Name", "name"])) || "Unknown Employee",
+    email: safeString(getFieldValue(fields, ["Email", mapping.email, "email"])),
+    department: safeString(getFieldValue(fields, ["Department", mapping.department, "department_id"])),
+    departmentId: safeString(getFieldValue(fields, ["Department", "Department ID", "department_id"])),
+    team: safeString(getFieldValue(fields, ["Team", "Team Name", "team_id"])),
+    position: safeString(getFieldValue(fields, ["Position", "Role", "Job Title", "role_title"])),
+    overallScore: safeNumber(getFieldValue(fields, ["KPI Score", mapping.kpiScore, "Overall Score", "kpi_score", "overall_performance_score"])),
+    totalKPIs: safeNumber(getFieldValue(fields, ["Total KPIs", "KPIs Assigned", "active_kpi_count"])),
+    completedKPIs: safeNumber(getFieldValue(fields, ["Completed KPIs", "KPIs Completed", "completed_kpi_count"])),
+    avatar: safeString(getFieldValue(fields, ["Avatar", "Photo", "avatar"])),
+    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At", "created_at"]))) || new Date().toISOString(),
+    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At", "updated_at"]))) || new Date().toISOString(),
+    manager: safeString(getFieldValue(fields, ["Manager", mapping.manager, "manager_employee_id"])),
   };
 }
 
@@ -94,16 +115,16 @@ export function mapDepartmentFromAirtable(
   const mapping = AIRTABLE_FIELD_MAPPINGS.departments;
 
   return {
-    id: safeString(getFieldValue(fields, ["ID", mapping.id])) || record.id,
-    departmentName: safeString(getFieldValue(fields, ["Department Name", mapping.departmentName, "Name"])) || "Unknown Department",
-    description: safeString(getFieldValue(fields, ["Description", mapping.description, "Notes"])),
-    averageScore: safeNumber(getFieldValue(fields, ["Avg KPI Sciore", "Avg KPI Score", mapping.averageScore, "Average Score"])),
-    employeeCount: safeNumber(getFieldValue(fields, ["Employee Count", mapping.employeeCount, "Total Employees"])),
-    totalKPIs: safeNumber(getFieldValue(fields, ["Active KPIs", mapping.activeKpis, "Total KPIs"])),
-    completedKPIs: safeNumber(getFieldValue(fields, ["Completed KPIs", "KPIs Completed"])),
-    headOfDepartment: safeString(getFieldValue(fields, ["Manager", mapping.manager, "Department Head"])),
-    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At"]))) || new Date().toISOString(),
-    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At"]))) || new Date().toISOString(),
+    id: safeString(getFieldValue(fields, ["ID", mapping.id, "id"])) || record.id,
+    departmentName: safeString(getFieldValue(fields, ["Department Name", mapping.departmentName, "Name", "name"])) || "Unknown Department",
+    description: safeString(getFieldValue(fields, ["Description", mapping.description, "Notes", "description"])),
+    averageScore: safeNumber(getFieldValue(fields, ["Avg KPI Sciore", "Avg KPI Score", mapping.averageScore, "Average Score", "average_kpi_score", "overall_score"])),
+    employeeCount: safeNumber(getFieldValue(fields, ["Employee Count", mapping.employeeCount, "Total Employees", "employee_count"])),
+    totalKPIs: safeNumber(getFieldValue(fields, ["Active KPIs", mapping.activeKpis, "Total KPIs", "active_kpi_count"])),
+    completedKPIs: safeNumber(getFieldValue(fields, ["Completed KPIs", "KPIs Completed", "completed_kpi_count"])),
+    headOfDepartment: safeString(getFieldValue(fields, ["Manager", mapping.manager, "Department Head", "manager_employee_id"])),
+    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At", "created_at"]))) || new Date().toISOString(),
+    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At", "updated_at"]))) || new Date().toISOString(),
   };
 }
 
@@ -118,17 +139,17 @@ export function mapTaskFromAirtable(
 
   return {
     id: record.id,
-    taskName: safeString(getFieldValue(fields, ["Task Name", mapping.taskName, "Name", "Title"])) || "Untitled Task",
-    description: safeString(getFieldValue(fields, ["Description", mapping.description, "Notes"])),
-    status: normalizeTaskStatus(safeString(getFieldValue(fields, ["Status", mapping.status]))),
-    priority: normalizeTaskPriority(safeString(getFieldValue(fields, ["Priority", mapping.priority]))),
-    assignedTo: safeString(getFieldValue(fields, ["Assigned To", mapping.assignedTo, "Assigned Employee"])),
-    assignedToId: safeString(getFieldValue(fields, ["Assigned To", "Assigned Employee ID"])),
-    kpiId: safeString(getFieldValue(fields, ["Related KPI", mapping.relatedKpi, "KPI ID"])),
-    dueDate: formatDateISO(safeString(getFieldValue(fields, ["Due Date", mapping.dueDate]))),
-    completedAt: formatDateISO(safeString(getFieldValue(fields, ["Completed Date", "Completed At"]))),
-    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At"]))) || new Date().toISOString(),
-    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At"]))) || new Date().toISOString(),
+    taskName: safeString(getFieldValue(fields, ["Task Name", mapping.taskName, "Name", "Title", "title"])) || "Untitled Task",
+    description: safeString(getFieldValue(fields, ["Description", mapping.description, "Notes", "description"])),
+    status: normalizeTaskStatus(safeString(getFieldValue(fields, ["Status", mapping.status, "status"]))),
+    priority: normalizeTaskPriority(safeString(getFieldValue(fields, ["Priority", mapping.priority, "priority"]))),
+    assignedTo: safeString(getFieldValue(fields, ["Assigned To", mapping.assignedTo, "Assigned Employee", "assigned_employee_id"])),
+    assignedToId: safeString(getFieldValue(fields, ["Assigned To", "Assigned Employee ID", "assigned_employee_id"])),
+    kpiId: safeString(getFieldValue(fields, ["Related KPI", mapping.relatedKpi, "KPI ID", "related_kpi_id"])),
+    dueDate: formatDateISO(safeString(getFieldValue(fields, ["Due Date", mapping.dueDate, "due_date"]))),
+    completedAt: formatDateISO(safeString(getFieldValue(fields, ["Completed Date", "Completed At", "updated_at"]))),
+    createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created At", "created_at"]))) || new Date().toISOString(),
+    lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Updated At", "updated_at"]))) || new Date().toISOString(),
   };
 }
 
