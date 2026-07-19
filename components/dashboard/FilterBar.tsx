@@ -57,3 +57,4 @@ export function FilterBar({ onRefresh, onSearch, loading }: FilterBarProps) {
     </div>
   );
 }
+

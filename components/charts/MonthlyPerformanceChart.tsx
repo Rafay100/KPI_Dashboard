@@ -39,3 +39,4 @@ export const MonthlyPerformanceChart = memo(function MonthlyPerformanceChart({ d
     </ResponsiveContainer>
   );
 });
+

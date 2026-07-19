@@ -72,3 +72,4 @@ export interface AdapterCapabilities {
   supportsFiltering: boolean;
   maxRecordsPerRequest: number;
 }
+

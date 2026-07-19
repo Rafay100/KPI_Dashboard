@@ -38,3 +38,4 @@ export const ChartCard = memo(function ChartCard({
     </div>
   );
 });
+

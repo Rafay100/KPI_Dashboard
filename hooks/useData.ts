@@ -163,3 +163,4 @@ export function useEmployeeHistory(employeeId: string) {
     staleTime: 2 * 60 * 1000,
   });
 }
+

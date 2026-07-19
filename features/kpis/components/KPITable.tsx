@@ -261,3 +261,4 @@ export function KPITable({ data, onRowClick, loading }: KPITableProps) {
     </div>
   );
 }
+

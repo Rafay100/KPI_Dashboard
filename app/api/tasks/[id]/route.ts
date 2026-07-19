@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data.service";
 import airtableClient from "@/services/airtable.client";
 import { cleanErrorMessage, validateEnvVars } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -92,7 +92,7 @@ export async function PATCH(
 
     // Update the record in Airtable (cast to satisfy FieldSet generic constraint)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await airtableService.updateRecord(tableName, id, airtableFields as any);
+    await dataService.updateRecord(tableName, id, airtableFields as any);
 
     // Invalidate tasks server cache so next GET returns fresh data
     serverCache.invalidate(CACHE_KEYS.TASKS);
@@ -138,7 +138,7 @@ export async function GET(
       );
     }
 
-    const task = await airtableService.getTaskById(id);
+    const task = await dataService.getTaskById(id);
     if (!task) {
       return NextResponse.json(
         { success: false, error: "Not Found", message: `Task ${id} not found` } as APIResponse<null>,
@@ -192,7 +192,7 @@ export async function DELETE(
     const tableName = await airtableClient.getTableName("tasks");
     console.log(`🗑️  Deleting Task ${id} from Airtable table "${tableName}"…`);
 
-    await airtableService.deleteRecord(tableName, id);
+    await dataService.deleteRecord(tableName, id);
 
     // Invalidate tasks server cache
     serverCache.invalidate(CACHE_KEYS.TASKS);

@@ -98,3 +98,4 @@ export class JiraAdapter extends BaseAdapter {
     return "Jira";
   }
 }
+

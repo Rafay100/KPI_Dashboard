@@ -14,3 +14,4 @@ describe("calculateKPIScore", () => {
     expect(calculateKPIScore({ actualValue: 75, targetValue: 100, minimumValue: 50, maximumValue: 100, rule: "range" })).toBe(50);
   });
 });
+

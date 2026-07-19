@@ -120,3 +120,4 @@ export class AdapterFactory {
     return this.create(sourceType, config);
   }
 }
+

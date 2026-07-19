@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { KPISchema, CreateKPISchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -45,7 +45,7 @@ export async function GET() {
 
     // Fetch KPIs from Airtable
     console.log("🔄 Fetching KPIs from Airtable...");
-    const kpis = await airtableService.getKPIs();
+    const kpis = await dataService.getKPIs();
 
     // Validate data and filter out invalid records
     const validatedKPIs = kpis
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
       ID: validated.code || "",
     };
 
-    const recordId = await airtableService.createRecord("KPIs", airtableFields as Partial<FieldSet>);
+    const recordId = await dataService.createRecord("KPIs", airtableFields as Partial<FieldSet>);
     invalidateKpiCache();
 
     return NextResponse.json(
@@ -135,3 +135,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

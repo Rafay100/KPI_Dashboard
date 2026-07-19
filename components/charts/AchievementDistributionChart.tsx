@@ -40,3 +40,4 @@ export const AchievementDistributionChart = memo(function AchievementDistributio
     </ResponsiveContainer>
   );
 });
+

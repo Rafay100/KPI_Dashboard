@@ -13,9 +13,15 @@ import type {
   HealthCheckResponse,
   AdapterCapabilities,
 } from "./types";
-import { airtableService } from "@/services/airtable.service";
 import airtableClient from "@/services/airtable.client";
 import { logInfo, logError, logSuccess } from "@/utils/logger";
+import {
+  mapKPIFromAirtable,
+  mapEmployeeFromAirtable,
+  mapDepartmentFromAirtable,
+  mapTaskFromAirtable,
+  mapAchievementFromAirtable,
+} from "@/utils/mappers";
 
 /**
  * AirtableAdapter - Full implementation for Airtable data source
@@ -84,7 +90,10 @@ export class AirtableAdapter extends BaseAdapter {
   async fetchKPIs(): Promise<KPI[]> {
     try {
       logInfo(this.serviceName, "Fetching KPIs from Airtable");
-      const kpis = await airtableService.getKPIs();
+      const base = airtableClient.getBase();
+      const tableName = await airtableClient.getTableName("kpis");
+      const records = await base(tableName).select().all();
+      const kpis = records.map(record => mapKPIFromAirtable(record));
       logSuccess(this.serviceName, `Fetched ${kpis.length} KPIs`);
       return kpis;
     } catch (error) {
@@ -99,7 +108,10 @@ export class AirtableAdapter extends BaseAdapter {
   async fetchEmployees(): Promise<Employee[]> {
     try {
       logInfo(this.serviceName, "Fetching Employees from Airtable");
-      const employees = await airtableService.getEmployees();
+      const base = airtableClient.getBase();
+      const tableName = await airtableClient.getTableName("employees");
+      const records = await base(tableName).select().all();
+      const employees = records.map(record => mapEmployeeFromAirtable(record));
       logSuccess(this.serviceName, `Fetched ${employees.length} Employees`);
       return employees;
     } catch (error) {
@@ -114,7 +126,10 @@ export class AirtableAdapter extends BaseAdapter {
   async fetchDepartments(): Promise<Department[]> {
     try {
       logInfo(this.serviceName, "Fetching Departments from Airtable");
-      const departments = await airtableService.getDepartments();
+      const base = airtableClient.getBase();
+      const tableName = await airtableClient.getTableName("departments");
+      const records = await base(tableName).select().all();
+      const departments = records.map(record => mapDepartmentFromAirtable(record));
       logSuccess(
         this.serviceName,
         `Fetched ${departments.length} Departments`
@@ -132,7 +147,10 @@ export class AirtableAdapter extends BaseAdapter {
   async fetchTasks(): Promise<Task[]> {
     try {
       logInfo(this.serviceName, "Fetching Tasks from Airtable");
-      const tasks = await airtableService.getTasks();
+      const base = airtableClient.getBase();
+      const tableName = await airtableClient.getTableName("tasks");
+      const records = await base(tableName).select().all();
+      const tasks = records.map(record => mapTaskFromAirtable(record));
       logSuccess(this.serviceName, `Fetched ${tasks.length} Tasks`);
       return tasks;
     } catch (error) {
@@ -147,7 +165,10 @@ export class AirtableAdapter extends BaseAdapter {
   async fetchAchievements(): Promise<Achievement[]> {
     try {
       logInfo(this.serviceName, "Fetching Achievements from Airtable");
-      const achievements = await airtableService.getAchievements();
+      const base = airtableClient.getBase();
+      const tableName = await airtableClient.getTableName("achievements");
+      const records = await base(tableName).select().all();
+      const achievements = records.map(record => mapAchievementFromAirtable(record));
       logSuccess(
         this.serviceName,
         `Fetched ${achievements.length} Achievements`
@@ -309,3 +330,4 @@ export class AirtableAdapter extends BaseAdapter {
     return "Airtable";
   }
 }
+

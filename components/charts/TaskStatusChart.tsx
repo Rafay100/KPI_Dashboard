@@ -41,3 +41,4 @@ export const TaskStatusChart = memo(function TaskStatusChart({ data }: TaskStatu
     </ResponsiveContainer>
   );
 });
+

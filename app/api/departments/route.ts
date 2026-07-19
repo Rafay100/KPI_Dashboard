@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import airtableClient from "@/services/airtable.client";
 import { DepartmentSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
@@ -41,7 +41,7 @@ export async function GET() {
 
     // Fetch departments from Airtable
     console.log("🔄 Fetching Departments from Airtable...");
-    const departments = await airtableService.getDepartments();
+    const departments = await dataService.getDepartments();
 
     // Validate data and filter out invalid records
     const validatedDepartments = departments
@@ -179,4 +179,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
 

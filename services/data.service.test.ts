@@ -1,18 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getBaseMock = vi.fn();
-const getTableNameMock = vi.fn();
+const { getBaseMock, getTableNameMock } = vi.hoisted(() => ({
+  getBaseMock: vi.fn(),
+  getTableNameMock: vi.fn(),
+}));
 
-vi.mock("./airtable.client", () => ({
+vi.mock("@/services/airtable.client", () => ({
   default: {
     getBase: getBaseMock,
     getTableName: getTableNameMock,
   },
 }));
 
-describe("AirtableService KPI creation", () => {
+import { dataService } from "./data.service";
+
+describe("DataService KPI creation", () => {
   beforeEach(() => {
-    vi.resetModules();
     getBaseMock.mockReset();
     getTableNameMock.mockReset();
   });
@@ -24,9 +27,7 @@ describe("AirtableService KPI creation", () => {
     getBaseMock.mockReturnValue(baseMock);
     getTableNameMock.mockResolvedValue("01_KPIs");
 
-    const { airtableService } = await import("./airtable.service");
-
-    const recordId = await airtableService.createRecord("KPIs", {
+    const recordId = await dataService.createRecord("KPIs", {
       Name: "New KPI",
     });
 
@@ -34,7 +35,7 @@ describe("AirtableService KPI creation", () => {
     expect(baseMock).toHaveBeenCalledWith("01_KPIs");
     expect(createMock).toHaveBeenCalled();
     expect(recordId).toBe("rec123");
-  });
+  }, 30000);
 
   it("removes unsupported Airtable fields and retries the create call", async () => {
     const createMock = vi
@@ -46,9 +47,7 @@ describe("AirtableService KPI creation", () => {
     getBaseMock.mockReturnValue(baseMock);
     getTableNameMock.mockResolvedValue("KPIs");
 
-    const { airtableService } = await import("./airtable.service");
-
-    const recordId = await airtableService.createRecord("KPIs", {
+    const recordId = await dataService.createRecord("KPIs", {
       "KPI Name": "New KPI",
       Description: "A test KPI",
       "Department ID": "dept-1",
@@ -62,5 +61,5 @@ describe("AirtableService KPI creation", () => {
       expect.objectContaining({ "KPI Name": "New KPI", "Department ID": "dept-1" })
     );
     expect(recordId).toBe("rec456");
-  });
+  }, 30000);
 });

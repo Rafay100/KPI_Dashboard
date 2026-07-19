@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { EmployeeSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -40,7 +40,7 @@ export async function GET() {
 
     // Fetch employees from Airtable
     console.log("🔄 Fetching Employees from Airtable...");
-    const employees = await airtableService.getEmployees();
+    const employees = await dataService.getEmployees();
 
     // Validate data and filter out invalid records
     const validatedEmployees = employees
@@ -75,3 +75,4 @@ export async function GET() {
     );
   }
 }
+

@@ -84,3 +84,4 @@ export const CACHE_KEYS = {
   DEPARTMENT_BY_ID: (id: string) => `departments:${id}`,
   TASK_BY_ID: (id: string) => `tasks:${id}`,
 };
+

@@ -72,3 +72,4 @@ describe("Dashboard KPI and Calculations Test Suite", () => {
     expect(escapeCSVCell(dangerousOperator)).toBe("'+49123456");
   });
 });
+

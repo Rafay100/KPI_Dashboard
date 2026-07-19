@@ -59,3 +59,4 @@ export function calculateKPIStatus(input: KPIStatusInput): KPIStatus {
 
   return "At Risk";
 }
+

@@ -703,3 +703,4 @@ export default function RedesignedEmployeeRankingsPage() {
     </Suspense>
   );
 }
+

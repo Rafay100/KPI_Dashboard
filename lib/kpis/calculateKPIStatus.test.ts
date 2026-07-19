@@ -10,3 +10,4 @@ describe("calculateKPIStatus", () => {
     expect(calculateKPIStatus({ actualValue: 50, targetValue: 100, score: 50, dueDate: "2099-01-01", isApproved: false })).toBe("Awaiting Approval");
   });
 });
+

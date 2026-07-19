@@ -150,3 +150,4 @@ export function KPIDetailDrawer({ kpi, isOpen, onClose }: KPIDetailDrawerProps) 
     </>
   );
 }
+

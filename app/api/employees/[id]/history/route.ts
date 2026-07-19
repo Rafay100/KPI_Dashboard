@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data.service";
 import airtableClient from "@/services/airtable.client";
 import { cleanErrorMessage } from "@/utils/helpers";
 
@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
   try {
     // 1. Fetch employee details to get their full name
-    const employees = await airtableService.getEmployees();
+    const employees = await dataService.getEmployees();
     const employee = employees.find((emp) => emp.id === id);
     if (!employee) {
       return NextResponse.json(

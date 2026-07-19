@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data.service";
 import { KPISchema, UpdateKPISchema } from "@/schemas/validation";
 import { cleanErrorMessage } from "@/utils/helpers";
 import type { APIResponse, KPI } from "@/types/models";
@@ -15,7 +15,7 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const kpi = await airtableService.getKPIById(id);
+    const kpi = await dataService.getKPIById(id);
 
     if (!kpi) {
       return NextResponse.json(
@@ -80,7 +80,7 @@ export async function PUT(
     // Always update LastUpdated
     airtableFields.LastUpdated = new Date().toISOString();
 
-    await airtableService.updateRecord("KPIs", id, airtableFields as Partial<FieldSet>);
+    await dataService.updateRecord("KPIs", id, airtableFields as Partial<FieldSet>);
 
     return NextResponse.json(
       {
@@ -114,7 +114,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    await airtableService.deleteRecord("KPIs", id);
+    await dataService.deleteRecord("KPIs", id);
 
     return NextResponse.json(
       {

@@ -569,3 +569,4 @@ export default function EmployeeAnalyticsDashboardPage() {
     </Suspense>
   );
 }
+

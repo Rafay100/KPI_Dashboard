@@ -221,3 +221,4 @@ export function NotificationsDropdown() {
     </div>
   );
 }
+

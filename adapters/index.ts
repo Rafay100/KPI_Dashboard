@@ -27,3 +27,4 @@ export { GoogleSheetsAdapter } from "./GoogleSheetsAdapter";
 
 // Factory
 export { AdapterFactory } from "./AdapterFactory";
+

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { cleanErrorMessage } from "@/utils/helpers";
 
 export async function GET() {
   try {
-    const kpis = await airtableService.getKPIs();
+    const kpis = await dataService.getKPIs();
     return NextResponse.json({ success: true, data: kpis.filter((kpi) => kpi.status === "at-risk" || kpi.status === "overdue") }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, error: cleanErrorMessage(error), message: "Failed to fetch pending updates" }, { status: 500 });
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Update ID is required" }, { status: 400 });
     }
 
-    await airtableService.updateRecord("KPIs", id, {
+    await dataService.updateRecord("KPIs", id, {
       Status: body.status || "in-progress",
       LastUpdated: new Date().toISOString(),
     });
@@ -45,7 +45,7 @@ export async function PUT(request: Request) {
       revision: "in-progress",
     } as const;
 
-    await airtableService.updateRecord("KPIs", id, {
+    await dataService.updateRecord("KPIs", id, {
       Status: statusMap[action as keyof typeof statusMap] || "in-progress",
       LastUpdated: new Date().toISOString(),
     });
@@ -55,3 +55,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: false, error: cleanErrorMessage(error), message: "Failed to update approval" }, { status: 400 });
   }
 }
+

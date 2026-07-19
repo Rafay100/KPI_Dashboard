@@ -328,3 +328,4 @@ export class GoogleSheetsAdapter extends BaseAdapter {
     return "Google Sheets";
   }
 }
+

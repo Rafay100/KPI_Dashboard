@@ -18,3 +18,4 @@ export function usePermissions() {
     hasRoleOrHigher: (_requiredRole: string) => true,
   };
 }
+

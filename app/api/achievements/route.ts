@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { AchievementSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -40,7 +40,7 @@ export async function GET() {
 
     // Fetch achievements from Airtable
     console.log("🔄 Fetching Achievements from Airtable...");
-    const achievements = await airtableService.getAchievements();
+    const achievements = await dataService.getAchievements();
 
     // Validate data and filter out invalid records
     const validatedAchievements = achievements
@@ -75,3 +75,4 @@ export async function GET() {
     );
   }
 }
+

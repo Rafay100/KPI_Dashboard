@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { KPISchema, EmployeeSchema, DepartmentSchema, TaskSchema, AchievementSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -55,7 +55,7 @@ export async function GET() {
     const startTime = Date.now();
 
     // Fetch ALL data in parallel using the optimized service method
-    const { kpis, employees, departments, tasks, achievements } = await airtableService.getAllDashboardData();
+    const { kpis, employees, departments, tasks, achievements } = await dataService.getAllDashboardData();
 
     const fetchTime = Date.now() - startTime;
     console.log(`✅ Fetched all data in ${fetchTime}ms`);
@@ -115,3 +115,4 @@ export async function GET() {
     );
   }
 }
+

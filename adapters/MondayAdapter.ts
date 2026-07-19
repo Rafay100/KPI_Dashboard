@@ -98,3 +98,4 @@ export class MondayAdapter extends BaseAdapter {
     return "Monday.com";
   }
 }
+

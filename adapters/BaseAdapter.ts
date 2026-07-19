@@ -115,3 +115,4 @@ export abstract class BaseAdapter {
     return this.isConnected;
   }
 }
+

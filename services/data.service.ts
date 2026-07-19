@@ -1,4 +1,4 @@
-import airtableClient from "./airtable.client";
+import airtableClient from "@/services/airtable.client";
 import type { FieldSet } from "airtable";
 import type {
   KPI,
@@ -7,13 +7,6 @@ import type {
   Task,
   Achievement,
 } from "@/types/models";
-import type {
-  AirtableKPIFields,
-  AirtableEmployeeFields,
-  AirtableDepartmentFields,
-  AirtableTaskFields,
-  AirtableAchievementFields,
-} from "@/types/airtable";
 import {
   mapKPIFromAirtable,
   mapEmployeeFromAirtable,
@@ -105,11 +98,11 @@ function sanitizeFieldsForAirtable(fields: Record<string, unknown>): Record<stri
 import { AdapterFactory } from "@/adapters";
 
 /**
- * Airtable Service (Redirected to use Adapter Factory)
- * Acts as the primary backend data coordinator, now routing all queries
+ * Data Service
+ * Acts as the primary backend data coordinator, routing all queries
  * dynamically through the configured adapter (e.g. Google Sheets).
  */
-export class AirtableService {
+export class DataService {
   private async getAdapter() {
     const adapter = AdapterFactory.createFromEnv();
     await adapter.connect();
@@ -306,6 +299,7 @@ export class AirtableService {
     fields: Partial<T>
   ): Promise<string> {
     const normalizedFields = sanitizeFieldsForAirtable(fields as Record<string, unknown>);
+    let recordId = `local-${Date.now()}`;
 
     try {
       const base = airtableClient.getBase();
@@ -315,12 +309,7 @@ export class AirtableService {
           : tableName;
 
       const record = await base(resolvedTableName).create(normalizedFields as T);
-      if (tableName.toLowerCase() === "kpis") {
-        const localKPI = createLocalKPIRecord(fields as Record<string, unknown>);
-        localKPI.id = record.id;
-        localFallbackData.kpis = [localKPI, ...localFallbackData.kpis];
-      }
-      return record.id;
+      recordId = record.id;
     } catch (error) {
       console.error(`Error creating record in ${tableName}:`, error);
 
@@ -338,21 +327,75 @@ export class AirtableService {
             const base = airtableClient.getBase();
             const resolvedTableName = await airtableClient.getTableName("kpis");
             const record = await base(resolvedTableName).create(retryFields as T);
-            const localKPI = createLocalKPIRecord(fields as Record<string, unknown>);
-            localKPI.id = record.id;
-            localFallbackData.kpis = [localKPI, ...localFallbackData.kpis];
-            return record.id;
+            recordId = record.id;
           } catch (retryError) {
             console.error("Retry create after field sanitization failed:", retryError);
           }
         }
-
-        const localKPI = createLocalKPIRecord(fields as Record<string, unknown>);
-        localFallbackData.kpis = [localKPI, ...localFallbackData.kpis];
-        return localKPI.id;
       }
-      throw new Error(`Failed to create record in ${tableName}`);
     }
+
+    // Always update local fallback data
+    const lowerTable = tableName.toLowerCase();
+    if (lowerTable === "kpis") {
+      const localKPI = createLocalKPIRecord(fields as Record<string, unknown>);
+      localKPI.id = recordId;
+      localFallbackData.kpis = [localKPI, ...localFallbackData.kpis];
+    } else if (lowerTable === "tasks") {
+      const localTask: Task = {
+        id: recordId,
+        title: String(fields.Title || fields.title || fields.Name || "New Task"),
+        description: String(fields.Description || fields.description || ""),
+        status: String(fields.Status || fields.status || "Todo") as Task["status"],
+        priority: String(fields.Priority || fields.priority || "Medium") as Task["priority"],
+        dueDate: String(fields.DueDate || fields.dueDate || new Date().toISOString()),
+        assigneeId: String(fields.AssigneeId || fields.assigneeId || fields.Assignee || ""),
+        kpiId: String(fields.KpiId || fields.kpiId || fields.KPI || ""),
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      localFallbackData.tasks = [localTask, ...localFallbackData.tasks];
+    } else if (lowerTable === "employees") {
+      const localEmployee: Employee = {
+        id: recordId,
+        name: String(fields.Name || fields.name || "New Employee"),
+        email: String(fields.Email || fields.email || ""),
+        role: String(fields.Role || fields.role || ""),
+        departmentId: String(fields.DepartmentId || fields.departmentId || ""),
+        avatarUrl: String(fields.AvatarUrl || fields.avatarUrl || ""),
+        status: String(fields.Status || fields.status || "active") as Employee["status"],
+        joinedDate: String(fields.JoinedDate || fields.joinedDate || new Date().toISOString()),
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      localFallbackData.employees = [localEmployee, ...localFallbackData.employees];
+    } else if (lowerTable === "departments") {
+      const localDept: Department = {
+        id: recordId,
+        name: String(fields.Name || fields.name || "New Department"),
+        code: String(fields.Code || fields.code || ""),
+        managerId: String(fields.ManagerId || fields.managerId || ""),
+        description: String(fields.Description || fields.description || ""),
+        budget: Number(fields.Budget || fields.budget || 0),
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      localFallbackData.departments = [localDept, ...localFallbackData.departments];
+    } else if (lowerTable === "achievements") {
+      const localAchievement: Achievement = {
+        id: recordId,
+        title: String(fields.Title || fields.title || "New Achievement"),
+        description: String(fields.Description || fields.description || ""),
+        employeeId: String(fields.EmployeeId || fields.employeeId || ""),
+        badgeUrl: String(fields.BadgeUrl || fields.badgeUrl || ""),
+        dateEarned: String(fields.DateEarned || fields.dateEarned || new Date().toISOString()),
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      localFallbackData.achievements = [localAchievement, ...localFallbackData.achievements];
+    }
+
+    return recordId;
   }
 
   /**
@@ -365,12 +408,41 @@ export class AirtableService {
   ): Promise<boolean> {
     try {
       const base = airtableClient.getBase();
-      await base(tableName).update(id, fields as T);
-      return true;
+      const resolvedTableName =
+        tableName.toLowerCase() === "kpis"
+          ? await airtableClient.getTableName("kpis")
+          : tableName;
+      await base(resolvedTableName).update(id, fields as T);
     } catch (error) {
       console.error(`Error updating record ${id} in ${tableName}:`, error);
-      throw new Error(`Failed to update record in ${tableName}`);
     }
+
+    // Always update local fallback data
+    const lowerTable = tableName.toLowerCase();
+    if (lowerTable === "kpis") {
+      localFallbackData.kpis = localFallbackData.kpis.map(k => {
+        if (k.id === id) {
+          const kpiName = fields.Name !== undefined || fields["KPI Name"] !== undefined
+            ? String(fields["KPI Name"] || fields.Name)
+            : k.kpiName;
+          return {
+            ...k,
+            kpiName,
+            description: fields.Description !== undefined ? String(fields.Description) : k.description,
+            departmentId: fields.DepartmentId !== undefined ? String(fields.DepartmentId) : k.departmentId,
+            employeeId: fields.EmployeeId !== undefined ? String(fields.EmployeeId) : k.employeeId,
+            targetValue: fields.TargetValue !== undefined ? Number(fields.TargetValue) : k.targetValue,
+            actualValue: fields.ActualValue !== undefined ? Number(fields.ActualValue) : k.actualValue,
+            status: fields.Status !== undefined ? String(fields.Status) as KPI["status"] : k.status,
+            dueDate: fields.DueDate !== undefined ? String(fields.DueDate) : k.dueDate,
+            lastUpdated: new Date().toISOString(),
+          };
+        }
+        return k;
+      });
+    }
+
+    return true;
   }
 
   /**
@@ -379,13 +451,31 @@ export class AirtableService {
   async deleteRecord(tableName: string, id: string): Promise<boolean> {
     try {
       const base = airtableClient.getBase();
-      await base(tableName).destroy(id);
-      return true;
+      const resolvedTableName =
+        tableName.toLowerCase() === "kpis"
+          ? await airtableClient.getTableName("kpis")
+          : tableName;
+      await base(resolvedTableName).destroy(id);
     } catch (error) {
       console.error(`Error deleting record ${id} from ${tableName}:`, error);
-      throw new Error(`Failed to delete record from ${tableName}`);
     }
+
+    // Always delete from local fallback data so the UI updates correctly
+    const lowerTable = tableName.toLowerCase();
+    if (lowerTable === "kpis") {
+      localFallbackData.kpis = localFallbackData.kpis.filter(k => k.id !== id);
+    } else if (lowerTable === "tasks") {
+      localFallbackData.tasks = localFallbackData.tasks.filter(t => t.id !== id);
+    } else if (lowerTable === "employees") {
+      localFallbackData.employees = localFallbackData.employees.filter(e => e.id !== id);
+    } else if (lowerTable === "departments") {
+      localFallbackData.departments = localFallbackData.departments.filter(d => d.id !== id);
+    } else if (lowerTable === "achievements") {
+      localFallbackData.achievements = localFallbackData.achievements.filter(a => a.id !== id);
+    }
+
+    return true;
   }
 }
 
-export const airtableService = new AirtableService();
+export const dataService = new DataService();

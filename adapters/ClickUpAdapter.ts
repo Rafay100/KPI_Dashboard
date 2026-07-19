@@ -98,3 +98,4 @@ export class ClickUpAdapter extends BaseAdapter {
     return "ClickUp";
   }
 }
+

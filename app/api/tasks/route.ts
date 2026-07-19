@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data\.service";
 import { TaskSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -40,7 +40,7 @@ export async function GET() {
 
     // Fetch tasks from Airtable
     console.log("🔄 Fetching Tasks from Airtable...");
-    const tasks = await airtableService.getTasks();
+    const tasks = await dataService.getTasks();
 
     // Validate data and filter out invalid records
     const validatedTasks = tasks
@@ -75,3 +75,4 @@ export async function GET() {
     );
   }
 }
+

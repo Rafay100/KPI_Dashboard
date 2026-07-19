@@ -39,3 +39,4 @@ export const KPIProgressChart = memo(function KPIProgressChart({ data }: KPIProg
     </ResponsiveContainer>
   );
 });
+

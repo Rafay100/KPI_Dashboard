@@ -71,3 +71,4 @@ export const ActivityCard = memo(function ActivityCard({ title, children, loadin
     </div>
   );
 });
+

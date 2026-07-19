@@ -7,3 +7,4 @@ interface RequireRoleProps {
 export function RequireRole({ children }: RequireRoleProps) {
   return <>{children}</>;
 }
+

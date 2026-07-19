@@ -54,3 +54,4 @@ export const PerformanceTrendChart = memo(function PerformanceTrendChart({ data 
     </ResponsiveContainer>
   );
 });
+

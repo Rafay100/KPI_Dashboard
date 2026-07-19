@@ -33,3 +33,4 @@ export function ProgressCell({ actual, target, score }: ProgressCellProps) {
     </div>
   );
 }
+

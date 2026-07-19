@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { airtableService } from "@/services/airtable.service";
+import { dataService } from "@/services/data.service";
 import airtableClient from "@/services/airtable.client";
 import { cleanErrorMessage } from "@/utils/helpers";
 
@@ -14,7 +14,7 @@ export async function GET(
   const { id } = await params;
   try {
     // 1. Fetch the KPI record to get its Code (i.e. 'ID' like KPI-003)
-    const kpi = await airtableService.getKPIById(id);
+    const kpi = await dataService.getKPIById(id);
     if (!kpi) {
       return NextResponse.json(
         { success: false, error: "Not Found", message: "KPI not found" },

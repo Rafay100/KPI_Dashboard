@@ -117,3 +117,4 @@ export const MENU_ITEMS: MenuItem[] = [
     href: "/settings",
   },
 ];
+

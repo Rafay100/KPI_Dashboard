@@ -42,3 +42,4 @@ export type CardContentProps = React.HTMLAttributes<HTMLDivElement>;
 export function CardContent({ className, ...props }: CardContentProps) {
   return <div className={cn("pt-0", className)} {...props} />;
 }
+
