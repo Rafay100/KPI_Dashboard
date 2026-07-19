@@ -50,7 +50,7 @@ function getFieldValue(fields: Record<string, unknown>, candidates: string[]): u
  * Map Airtable KPI record to normalized KPI model - USING ACTUAL AIRTABLE FIELD NAMES
  */
 export function mapKPIFromAirtable(
-  record: AirtableRecord<AirtableKPIFields>
+  record: AirtableRecord
 ): KPI {
   const fields = record.fields as Record<string, unknown>;
 
@@ -82,7 +82,7 @@ export function mapKPIFromAirtable(
  * Map Airtable Employee record - UPDATED WITH ACTUAL FIELDS
  */
 export function mapEmployeeFromAirtable(
-  record: AirtableRecord<AirtableEmployeeFields>
+  record: AirtableRecord
 ): Employee {
   const fields = record.fields as Record<string, unknown>;
   const mapping = AIRTABLE_FIELD_MAPPINGS.employees;
@@ -109,7 +109,7 @@ export function mapEmployeeFromAirtable(
  * Map Airtable Department record - UPDATED WITH ACTUAL FIELDS
  */
 export function mapDepartmentFromAirtable(
-  record: AirtableRecord<AirtableDepartmentFields>
+  record: AirtableRecord
 ): Department {
   const fields = record.fields as Record<string, unknown>;
   const mapping = AIRTABLE_FIELD_MAPPINGS.departments;
@@ -132,7 +132,7 @@ export function mapDepartmentFromAirtable(
  * Map Airtable Task record
  */
 export function mapTaskFromAirtable(
-  record: AirtableRecord<AirtableTaskFields>
+  record: AirtableRecord
 ): Task {
   const fields = record.fields as Record<string, unknown>;
   const mapping = AIRTABLE_FIELD_MAPPINGS.tasks;
@@ -157,7 +157,7 @@ export function mapTaskFromAirtable(
  * Map Airtable Achievement record - UPDATED WITH ACTUAL FIELDS
  */
 export function mapAchievementFromAirtable(
-  record: AirtableRecord<AirtableAchievementFields>
+  record: AirtableRecord
 ): Achievement {
   const fields = record.fields as Record<string, unknown>;
   const mapping = AIRTABLE_FIELD_MAPPINGS.achievements;

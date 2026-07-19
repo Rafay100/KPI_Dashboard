@@ -5,7 +5,8 @@ import type { FieldSet, Record } from "airtable";
  * These represent the raw data structure from Airtable
  */
 
-export type AirtableRecord<T extends FieldSet> = Record<T>;
+export type AirtableRecord<T extends FieldSet = FieldSet> = Record<T>;
+
 
 export interface AirtableKPIFields extends FieldSet {
   "KPI Name": string;
