@@ -76,6 +76,29 @@ export abstract class BaseAdapter {
   abstract fetchAchievements(): Promise<Achievement[]>;
 
   /**
+   * Create a record in the data source
+   * Must return the newly created record's identifier
+   */
+  abstract createRecord(
+    tableName: string,
+    fields: Record<string, unknown>
+  ): Promise<string>;
+
+  /**
+   * Update an existing record in the data source
+   */
+  abstract updateRecord(
+    tableName: string,
+    id: string,
+    fields: Record<string, unknown>
+  ): Promise<boolean>;
+
+  /**
+   * Delete a record from the data source
+   */
+  abstract deleteRecord(tableName: string, id: string): Promise<boolean>;
+
+  /**
    * Synchronize all data from the source
    * Returns sync status with success/failure counts
    */

@@ -129,7 +129,7 @@ export class GoogleSheetsAdapter extends BaseAdapter {
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: sheetId,
-        range: `${tabName}!A1:Z1000`,
+        range: `${tabName}!A1:ZZ5000`,
       });
 
       const rows = response.data.values;
@@ -174,7 +174,9 @@ export class GoogleSheetsAdapter extends BaseAdapter {
   async fetchEmployees(): Promise<Employee[]> {
     try {
       const records = await this.fetchSheetRecords("Employees");
-      return records.map(record => mapEmployeeFromAirtable(record));
+      return records
+        .map(record => mapEmployeeFromAirtable(record))
+        .filter(emp => emp.name && emp.name !== "Unknown Employee" && emp.id !== "null");
     } catch (error) {
       logError(this.serviceName, "fetchEmployees failed, returning empty list", error);
       return [];
@@ -184,7 +186,39 @@ export class GoogleSheetsAdapter extends BaseAdapter {
   async fetchDepartments(): Promise<Department[]> {
     try {
       const records = await this.fetchSheetRecords("Departments");
-      return records.map(record => mapDepartmentFromAirtable(record));
+      const canonicalIds = new Set([
+        "dept_01", "dept_02", "dept_03", "dept_04",
+        "dept_05", "dept_06", "dept_07", "dept_08",
+        "dept_1", "dept_2", "dept_3", "dept_4",
+        "dept_5", "dept_6", "dept_7", "dept_8",
+        "1", "2", "3", "4", "5", "6", "7", "8"
+      ]);
+
+      const mapped = records
+        .map(record => mapDepartmentFromAirtable(record))
+        .filter(dept => {
+          if (!dept.id || dept.id === "null" || dept.id === "undefined") return false;
+          if (!dept.departmentName || dept.departmentName === "Unknown Department" || dept.departmentName === "null" || dept.departmentName === "undefined") return false;
+          // Retain only canonical departments (filtering unreferenced shadow dept_09..dept_16)
+          const lowerId = dept.id.trim().toLowerCase();
+          return canonicalIds.has(lowerId);
+        });
+
+      // Deduplicate by canonical department ID if any duplicate rows exist
+      const seenIds = new Set<string>();
+      const canonicalDepartments: Department[] = [];
+      for (const dept of mapped) {
+        const normId = dept.id.trim().toLowerCase();
+        if (!seenIds.has(normId)) {
+          seenIds.add(normId);
+          canonicalDepartments.push(dept);
+        }
+      }
+
+      // Sort by canonical department order (dept_01 through dept_08)
+      canonicalDepartments.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+
+      return canonicalDepartments;
     } catch (error) {
       logError(this.serviceName, "fetchDepartments failed, returning empty list", error);
       return [];
@@ -313,6 +347,31 @@ export class GoogleSheetsAdapter extends BaseAdapter {
     };
   }
 
+  async createRecord(
+    tableName: string,
+    _fields: Record<string, unknown>
+  ): Promise<string> {
+    const errorMsg = `Write operations are not supported by the Google Sheets adapter (table: ${tableName}).`;
+    logError(this.serviceName, errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  async updateRecord(
+    tableName: string,
+    id: string,
+    _fields: Record<string, unknown>
+  ): Promise<boolean> {
+    const errorMsg = `Write operations are not supported by the Google Sheets adapter (table: ${tableName}, id: ${id}).`;
+    logError(this.serviceName, errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  async deleteRecord(tableName: string, id: string): Promise<boolean> {
+    const errorMsg = `Write operations are not supported by the Google Sheets adapter (table: ${tableName}, id: ${id}).`;
+    logError(this.serviceName, errorMsg);
+    throw new Error(errorMsg);
+  }
+
   getCapabilities(): AdapterCapabilities {
     return {
       supportsRealtime: true,
@@ -320,6 +379,7 @@ export class GoogleSheetsAdapter extends BaseAdapter {
       supportsBulkOperations: true,
       supportsSearch: false,
       supportsFiltering: true,
+      supportsWrites: false,
       maxRecordsPerRequest: 1000,
     };
   }

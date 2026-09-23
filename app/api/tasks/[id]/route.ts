@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { dataService } from "@/services/data.service";
-import airtableClient from "@/services/airtable.client";
 import { cleanErrorMessage, validateEnvVars } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
 import type { APIResponse, Task } from "@/types/models";
@@ -85,14 +84,11 @@ export async function PATCH(
       );
     }
 
-    // Resolve actual Airtable table name
-    const tableName = await airtableClient.getTableName("tasks");
+    console.log(`🔄 Updating Task ${id}…`, airtableFields);
 
-    console.log(`🔄 Updating Task ${id} in Airtable table "${tableName}"…`, airtableFields);
-
-    // Update the record in Airtable (cast to satisfy FieldSet generic constraint)
+    // Update the record via dataService / active adapter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await dataService.updateRecord(tableName, id, airtableFields as any);
+    await dataService.updateRecord("tasks", id, airtableFields as any);
 
     // Invalidate tasks server cache so next GET returns fresh data
     serverCache.invalidate(CACHE_KEYS.TASKS);
@@ -189,10 +185,9 @@ export async function DELETE(
       );
     }
 
-    const tableName = await airtableClient.getTableName("tasks");
-    console.log(`🗑️  Deleting Task ${id} from Airtable table "${tableName}"…`);
+    console.log(`🗑️  Deleting Task ${id}…`);
 
-    await dataService.deleteRecord(tableName, id);
+    await dataService.deleteRecord("tasks", id);
 
     // Invalidate tasks server cache
     serverCache.invalidate(CACHE_KEYS.TASKS);

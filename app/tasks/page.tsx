@@ -15,6 +15,8 @@ import {
   Users, AlertTriangle, CheckCircle2, Ban, Layers, ShieldAlert,
 } from "lucide-react";
 import type { Task, Employee, KPI } from "@/types/models";
+import { calculateTaskExecutionMetrics, isOverdue } from "@/lib/scoring";
+import { useGlobalFilters } from "@/hooks/useGlobalFilters";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -596,33 +598,50 @@ function TasksContent() {
   const uniqueTeams = useMemo(() => Array.from(new Set(computedTasks.map(t => t.team).filter(v => v && v !== "—"))), [computedTasks]);
   const uniqueStaff = useMemo(() => Array.from(new Set(computedTasks.map(t => t.assignedTo).filter(Boolean))), [computedTasks]);
 
+  const { filters } = useGlobalFilters();
+
   // ── Filter + Sort ──────────────────────────────────────────────────────────
   const filteredTasks = useMemo(() => {
     return computedTasks.filter((task) => {
       const q = searchQuery.toLowerCase();
       const matchesSearch = !searchQuery || task.taskName?.toLowerCase().includes(q) || task.description?.toLowerCase().includes(q) || task.id?.toLowerCase().includes(q) || task.assignedTo?.toLowerCase().includes(q);
-      const matchesDept = !deptFilter || task.department.toLowerCase() === deptFilter.toLowerCase();
-      const matchesTeam = !teamFilter || task.team.toLowerCase() === teamFilter.toLowerCase();
-      const matchesEmp = !empFilter || task.assignedTo.toLowerCase() === empFilter.toLowerCase();
+      
+      const activeDept = deptFilter || filters.department || "";
+      const matchesDept = !activeDept || task.department.toLowerCase() === activeDept.toLowerCase();
+
+      const activeTeam = teamFilter || filters.team || "";
+      const matchesTeam = !activeTeam || task.team.toLowerCase() === activeTeam.toLowerCase();
+
+      const activeEmp = empFilter || filters.employee || "";
+      const matchesEmp = !activeEmp || task.assignedTo.toLowerCase() === activeEmp.toLowerCase();
+
       const matchesKPI = !kpiFilter || task.kpiId === kpiFilter;
       const matchesPriority = !priorityFilter || task.priority.toLowerCase() === priorityFilter.toLowerCase();
-      const matchesStatus = !statusFilter || task.status.toLowerCase() === statusFilter.toLowerCase();
+      
+      const activeStatus = statusFilter || filters.taskStatus || "";
+      const matchesStatus = !activeStatus || task.status.toLowerCase() === activeStatus.toLowerCase();
+
       let matchesProgress = true;
       if (progressFilter === "completed") matchesProgress = task.progress === 100;
       else if (progressFilter === "in-progress") matchesProgress = task.progress > 0 && task.progress < 100;
       else if (progressFilter === "not-started") matchesProgress = task.progress === 0;
+
       let matchesCompletionState = true;
       if (completionStateFilter === "completed") matchesCompletionState = task.status === "completed";
       else if (completionStateFilter === "incomplete") matchesCompletionState = task.status !== "completed";
+
       let matchesDate = true;
-      if (startDateFilter || endDateFilter) {
+      const activeStart = startDateFilter || filters.startDate || "";
+      const activeEnd = endDateFilter || filters.endDate || "";
+      if (activeStart || activeEnd) {
         const taskDate = new Date(task.dueDate).getTime();
-        if (startDateFilter && taskDate < new Date(startDateFilter).getTime()) matchesDate = false;
-        if (endDateFilter && taskDate > new Date(endDateFilter).getTime()) matchesDate = false;
+        if (activeStart && taskDate < new Date(activeStart).getTime()) matchesDate = false;
+        if (activeEnd && taskDate > new Date(activeEnd).getTime()) matchesDate = false;
       }
+
       return matchesSearch && matchesDept && matchesTeam && matchesEmp && matchesKPI && matchesPriority && matchesStatus && matchesProgress && matchesCompletionState && matchesDate;
     });
-  }, [computedTasks, searchQuery, deptFilter, teamFilter, empFilter, kpiFilter, priorityFilter, statusFilter, progressFilter, startDateFilter, endDateFilter, completionStateFilter]);
+  }, [computedTasks, searchQuery, deptFilter, teamFilter, empFilter, kpiFilter, priorityFilter, statusFilter, progressFilter, startDateFilter, endDateFilter, completionStateFilter, filters]);
 
   const sortedTasks = useMemo(() => {
     const sorted = [...filteredTasks];

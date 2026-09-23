@@ -1,120 +1,107 @@
-import type { MenuItem } from "@/types";
+import type { MenuItem, NavSection } from "@/types";
 
-export const MENU_ITEMS: MenuItem[] = [
+export const NAV_SECTIONS: NavSection[] = [
   {
-    id: "executive-overview",
-    label: "Executive Overview",
-    href: "/",
+    title: "OVERVIEW",
+    items: [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        href: "/",
+      },
+    ],
   },
   {
-    id: "approvals",
-    label: "Approvals",
-    href: "/approvals",
+    title: "PERFORMANCE",
+    items: [
+      {
+        id: "kpi-monitoring",
+        label: "KPI Monitoring",
+        href: "/kpi-monitoring",
+      },
+      {
+        id: "employees",
+        label: "Employees",
+        href: "/employees",
+      },
+      {
+        id: "departments",
+        label: "Departments",
+        href: "/departments",
+      },
+      {
+        id: "rankings",
+        label: "Rankings",
+        href: "/rankings",
+      },
+    ],
   },
   {
-    id: "kpi-tracking-board",
-    label: "KPI Tracking Board",
-    href: "/kpi-tracking-board",
+    title: "WORK MANAGEMENT",
+    items: [
+      {
+        id: "tasks",
+        label: "Tasks",
+        href: "/tasks",
+      },
+      {
+        id: "kanban",
+        label: "Kanban",
+        href: "/kanban",
+      },
+      {
+        id: "task-calendar",
+        label: "Calendar",
+        href: "/task-calendar",
+      },
+    ],
   },
   {
-    id: "tracking-boards",
-    label: "Tracking Boards",
-    href: "/tracking-boards",
+    title: "ANALYTICS",
+    items: [
+      {
+        id: "kpi-analytics",
+        label: "KPI Analytics",
+        href: "/kpi-analytics",
+      },
+      {
+        id: "employee-analytics",
+        label: "Employee Analytics",
+        href: "/employee-analytics",
+      },
+      {
+        id: "department-analytics",
+        label: "Department Analytics",
+        href: "/department-analytics",
+      },
+      {
+        id: "reports",
+        label: "Reports",
+        href: "/reports",
+      },
+    ],
   },
   {
-    id: "employees",
-    label: "Employees",
-    href: "/employees",
-  },
-  {
-    id: "employee-analytics",
-    label: "Employee Analytics",
-    href: "/employee-analytics",
-  },
-  {
-    id: "live-kpi-tracking",
-    label: "Live KPI Tracking",
-    href: "/live-kpi-tracking",
-  },
-  {
-    id: "create-kpi",
-    label: "Create KPI",
-    href: "/create-kpi",
-  },
-  {
-    id: "employee-rankings",
-    label: "Employee Rankings",
-    href: "/employee-rankings",
-  },
-  {
-    id: "department-rankings",
-    label: "Department Rankings",
-    href: "/department-rankings",
-  },
-  {
-    id: "department-leaderboard",
-    label: "Department Leaderboard",
-    href: "/department-leaderboard",
-  },
-  {
-    id: "department-analytics",
-    label: "Department Analytics",
-    href: "/department-analytics",
-  },
-  {
-    id: "kpi-monitoring",
-    label: "KPI Monitoring",
-    href: "/kpi-monitoring",
-  },
-  {
-    id: "task-tracking",
-    label: "Task Tracking",
-    href: "/task-tracking",
-  },
-  {
-    id: "tasks",
-    label: "Tasks",
-    href: "/tasks",
-  },
-  {
-    id: "kanban",
-    label: "Kanban Board",
-    href: "/kanban",
-  },
-  {
-    id: "task-analytics",
-    label: "Task Analytics",
-    href: "/task-analytics",
-  },
-  {
-    id: "task-calendar",
-    label: "Task Calendar",
-    href: "/task-calendar",
-  },
-  {
-    id: "achievements",
-    label: "Achievements",
-    href: "/achievements",
-  },
-  {
-    id: "reports",
-    label: "Reports",
-    href: "/reports",
-  },
-  {
-    id: "data-sources",
-    label: "Data Sources",
-    href: "/data-sources",
-  },
-  {
-    id: "import-mapping",
-    label: "Import Mapping",
-    href: "/import-mapping",
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    href: "/settings",
+    title: "ADMINISTRATION",
+    items: [
+      {
+        id: "data-sources",
+        label: "Data Sources",
+        href: "/data-sources",
+      },
+      {
+        id: "import-mapping",
+        label: "Import / Export",
+        href: "/import-mapping",
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        href: "/settings",
+      },
+    ],
   },
 ];
 
+// Flattened MENU_ITEMS array for any existing components referencing MENU_ITEMS
+export const MENU_ITEMS: MenuItem[] = NAV_SECTIONS.flatMap((sec) => sec.items);

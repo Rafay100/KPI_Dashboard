@@ -20,6 +20,12 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   Legend, ResponsiveContainer
 } from "recharts";
+import {
+  calculateEmployeeScorecard,
+  calculateDepartmentScorecard,
+  matchesEmployee,
+  matchesDepartment,
+} from "@/lib/scoring";
 
 type ReportTab = "kpi" | "employee" | "department" | "task" | "achievement" | "analytics";
 type TimeFilter = "weekly" | "monthly" | "quarterly" | "yearly";
@@ -311,20 +317,20 @@ export default function ReportsPage() {
   // ── Employee Report calculations ─────────────────────────────────────────────
   const enrichedEmployees = useMemo(() => {
     const list = employees.map(emp => {
-      const empKPIs = kpis.filter(k => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-      const empTasks = tasks.filter(t => t.assignedTo?.toLowerCase() === emp.name.toLowerCase());
-      const empAchievements = achievements.filter(a => a.employeeName?.toLowerCase() === emp.name.toLowerCase());
+      const scorecard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+      const empAchievements = achievements.filter(a => matchesEmployee(a.employeeId || a.employeeName, emp));
 
-      const assignedKPIs = empKPIs.length;
-      const completedKPIs = empKPIs.filter(k => k.status === "completed").length;
+      const assignedKPIs = scorecard.kpiCount;
+      const completedKPIs = scorecard.completedKpiCount;
       const pendingKPIs = assignedKPIs - completedKPIs;
 
-      const completedTasks = empTasks.filter(t => t.status === "completed").length;
-      const pendingTasks = empTasks.length - completedTasks;
+      const completedTasks = scorecard.completedTasks;
+      const pendingTasks = scorecard.taskCount - completedTasks;
       const achievementsCount = empAchievements.length;
 
       return {
         ...emp,
+        overallScore: scorecard.overallScore,
         assignedKPIs,
         completedKPIs,
         pendingKPIs,
@@ -352,7 +358,7 @@ export default function ReportsPage() {
 
       let matchDates = true;
       if (startDate || endDate) {
-        const empAchievements = achievements.filter(a => a.employeeName?.toLowerCase() === emp.name.toLowerCase());
+        const empAchievements = achievements.filter(a => matchesEmployee(a.employeeId || a.employeeName, emp));
         const hasAchievementInRange = empAchievements.some(a => {
           const itemTime = new Date(a.achievedAt).getTime();
           if (startDate && itemTime < new Date(startDate).getTime()) return false;
@@ -390,41 +396,19 @@ export default function ReportsPage() {
   // ── Department Report calculations ───────────────────────────────────────────
   const enrichedDepartments = useMemo(() => {
     const list = departments.map(dept => {
-      const deptKPIs = kpis.filter(k => k.category?.toLowerCase() === dept.departmentName.toLowerCase());
-      const deptEmployees = employees.filter(e => e.department?.toLowerCase() === dept.departmentName.toLowerCase());
-      const deptTasks = tasks.filter(t => 
-        deptEmployees.some(e => e.name.toLowerCase() === t.assignedTo?.toLowerCase())
-      );
-      const deptAchievements = achievements.filter(a =>
-        deptEmployees.some(e => e.name.toLowerCase() === a.employeeName?.toLowerCase())
-      );
-
-      const totalKPIs = deptKPIs.length;
-      const completedKPIs = deptKPIs.filter(k => k.status === "completed").length;
-      const kpiCompletionPct = totalKPIs > 0 ? Math.round((completedKPIs / totalKPIs) * 100) : 0;
-
-      const totalTasks = deptTasks.length;
-      const completedTasks = deptTasks.filter(t => t.status === "completed").length;
-      const taskCompletionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-      const totalAchievements = deptAchievements.length;
-      
-      const employeeCount = deptEmployees.length || dept.employeeCount || 0;
-      const averagePerformance = deptEmployees.length > 0 
-        ? Math.round(deptEmployees.reduce((sum, e) => sum + e.overallScore, 0) / deptEmployees.length)
-        : Math.round(dept.averageScore) || 0;
+      const scorecard = calculateDepartmentScorecard(dept, employees, kpis, tasks, achievements);
 
       return {
         ...dept,
-        employeeCount,
-        totalKPIs,
-        completedKPIs,
-        kpiCompletionPct,
-        totalTasks,
-        completedTasks,
-        taskCompletionPct,
-        totalAchievements,
-        averagePerformance,
+        employeeCount: scorecard.employeeCount,
+        totalKPIs: scorecard.activeKPIs,
+        completedKPIs: scorecard.completedKPIs,
+        kpiCompletionPct: scorecard.kpiCompletionRate,
+        totalTasks: scorecard.taskCount,
+        completedTasks: scorecard.completedTasks,
+        taskCompletionPct: scorecard.taskRate,
+        totalAchievements: scorecard.achievementPoints,
+        averagePerformance: scorecard.score,
       };
     });
 

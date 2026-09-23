@@ -310,6 +310,149 @@ export class AirtableAdapter extends BaseAdapter {
   }
 
   /**
+   * Helper to sanitize fields for Airtable KPIs
+   */
+  private sanitizeFieldsForAirtable(fields: Record<string, unknown>): Record<string, unknown> {
+    const allowedFields = new Set([
+      "Name",
+      "KPI Name",
+      "Description",
+      "Department ID",
+      "DepartmentId",
+      "departmentId",
+      "Employee ID",
+      "EmployeeId",
+      "employeeId",
+      "TargetValue",
+      "targetValue",
+      "ActualValue",
+      "actualValue",
+      "Status",
+      "status",
+      "DueDate",
+      "dueDate",
+      "LastUpdated",
+      "lastUpdated",
+      "ID",
+      "id",
+      "Category",
+      "category",
+      "Team",
+      "team",
+      "Owner",
+      "owner",
+      "Frequency",
+      "frequency",
+      "Unit",
+      "unit",
+      "Target Value",
+      "target",
+      "Actual Value",
+      "actual",
+    ]);
+
+    return Object.fromEntries(
+      Object.entries(fields).filter(([key]) => allowedFields.has(key))
+    );
+  }
+
+  /**
+   * Helper to resolve table name in Airtable
+   */
+  private async resolveTableName(tableName: string): Promise<string> {
+    const lower = tableName.toLowerCase();
+    if (lower === "kpis") return await airtableClient.getTableName("kpis");
+    if (lower === "tasks") return await airtableClient.getTableName("tasks");
+    if (lower === "departments") return await airtableClient.getTableName("departments");
+    if (lower === "employees") return await airtableClient.getTableName("employees");
+    if (lower === "achievements") return await airtableClient.getTableName("achievements");
+    return tableName;
+  }
+
+  /**
+   * Create a record in Airtable
+   */
+  async createRecord(
+    tableName: string,
+    fields: Record<string, unknown>
+  ): Promise<string> {
+    try {
+      const base = airtableClient.getBase();
+      const resolvedTableName = await this.resolveTableName(tableName);
+
+      const normalizedFields =
+        tableName.toLowerCase() === "kpis"
+          ? this.sanitizeFieldsForAirtable(fields)
+          : fields;
+
+      try {
+        const record = await base(resolvedTableName).create(normalizedFields as any);
+        const recordId = Array.isArray(record) ? record[0].id : (record as unknown as { id: string }).id;
+        logSuccess(this.serviceName, `Created record in ${resolvedTableName}: ${recordId}`);
+        return recordId;
+      } catch (error) {
+        if (tableName.toLowerCase() === "kpis") {
+          const isUnknownFieldError =
+            error instanceof Error &&
+            /unknown field name|invalid field|not supported/i.test(error.message);
+
+          if (isUnknownFieldError && Object.keys(normalizedFields).length > 1) {
+            const retryFields = Object.fromEntries(
+              Object.entries(normalizedFields).filter(
+                ([key]) => !["Description", "description"].includes(key)
+              )
+            );
+            const record = await base(resolvedTableName).create(retryFields as any);
+            const recordId = Array.isArray(record) ? record[0].id : (record as unknown as { id: string }).id;
+            logSuccess(this.serviceName, `Created record with retry in ${resolvedTableName}: ${recordId}`);
+            return recordId;
+          }
+        }
+        throw error;
+      }
+    } catch (error) {
+      logError(this.serviceName, `Failed to create record in ${tableName}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a record in Airtable
+   */
+  async updateRecord(
+    tableName: string,
+    id: string,
+    fields: Record<string, unknown>
+  ): Promise<boolean> {
+    try {
+      const base = airtableClient.getBase();
+      const resolvedTableName = await this.resolveTableName(tableName);
+      await base(resolvedTableName).update(id, fields as any);
+      logSuccess(this.serviceName, `Updated record ${id} in ${resolvedTableName}`);
+      return true;
+    } catch (error) {
+      logError(this.serviceName, `Failed to update record ${id} in ${tableName}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a record from Airtable
+   */
+  async deleteRecord(tableName: string, id: string): Promise<boolean> {
+    try {
+      const base = airtableClient.getBase();
+      const resolvedTableName = await this.resolveTableName(tableName);
+      await base(resolvedTableName).destroy(id);
+      logSuccess(this.serviceName, `Deleted record ${id} from ${resolvedTableName}`);
+      return true;
+    } catch (error) {
+      logError(this.serviceName, `Failed to delete record ${id} from ${tableName}`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get adapter capabilities
    */
   getCapabilities(): AdapterCapabilities {
@@ -319,6 +462,7 @@ export class AirtableAdapter extends BaseAdapter {
       supportsBulkOperations: true,
       supportsSearch: true,
       supportsFiltering: true,
+      supportsWrites: true,
       maxRecordsPerRequest: 100,
     };
   }

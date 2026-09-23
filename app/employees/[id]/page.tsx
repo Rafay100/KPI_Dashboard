@@ -47,6 +47,7 @@ import {
   BarChart3
 } from "lucide-react";
 import type { Employee, KPI, Achievement, Task } from "@/types/models";
+import { calculateEmployeeScorecard, matchesEmployee } from "@/lib/scoring";
 
 // Helper to determine status style
 const getStatusBadgeStyle = (status: string) => {
@@ -111,160 +112,115 @@ function EmployeeScorecardContent() {
   // Filter KPI items assigned to this employee
   const employeeKPIs = useMemo(() => {
     if (!employee) return [];
-    return kpis.filter(
-      (k) => k.employeeId?.toLowerCase() === employee.name.toLowerCase()
-    );
+    return kpis.filter((k) => matchesEmployee(k.employeeId, employee));
   }, [kpis, employee]);
 
   // Filter task items assigned to this employee
   const employeeTasks = useMemo(() => {
     if (!employee) return [];
-    return tasks.filter(
-      (t) => t.assignedTo?.toLowerCase() === employee.name.toLowerCase()
-    );
+    return tasks.filter((t) => matchesEmployee(t.assignedToId || t.assignedTo, employee));
   }, [tasks, employee]);
 
   // Filter achievement items earned by this employee
   const employeeAchievements = useMemo(() => {
     if (!employee) return [];
-    return achievements.filter(
-      (a) => a.employeeName?.toLowerCase() === employee.name.toLowerCase()
+    return achievements.filter((a) =>
+      matchesEmployee(a.employeeId || a.employeeName, employee)
     );
   }, [achievements, employee]);
 
   // Compute stats rankings across all employees
   const rankings = useMemo(() => {
     if (employees.length === 0) return { rank: 1, total: 1, previousRank: 1 };
-    
-    const sorted = employees.map((emp) => {
-      const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-      
-      const kpiScore = empKPIs.length > 0
-        ? Math.round(empKPIs.reduce((sum, k) => sum + k.score, 0) / empKPIs.length)
-        : Math.round(emp.overallScore || 0);
 
-      let weightedKpiScore = kpiScore;
-      if (empKPIs.length > 0) {
-        let totalWeight = 0, weightedSum = 0;
-        empKPIs.forEach((k) => {
-          let weight = 1.0;
-          const cat = k.category?.toLowerCase();
-          if (cat === "engineering" || cat === "sales") weight = 1.25;
-          else if (cat === "support" || cat === "hr") weight = 0.75;
-          weightedSum += k.score * weight;
-          totalWeight += weight;
-        });
-        weightedKpiScore = Math.round(weightedSum / totalWeight);
-      }
-
-      const empAchievements = achievements.filter((a) => a.employeeName?.toLowerCase() === emp.name.toLowerCase());
-      const valueScore = Math.min(70 + Math.round(empAchievements.reduce((s, a) => s + a.points, 0) / 2.5), 100);
-      const overall = Math.round((kpiScore + weightedKpiScore + valueScore) / 3);
-
-      return { id: emp.id, score: overall };
-    }).sort((a, b) => b.score - a.score);
+    const sorted = employees
+      .map((emp) => {
+        const scorecard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+        return { id: emp.id, score: scorecard.overallScore };
+      })
+      .sort((a, b) => b.score - a.score);
 
     if (!employee) return { rank: 1, total: sorted.length, previousRank: 1 };
 
     const rankIdx = sorted.findIndex((s) => s.id === employee.id);
     const rank = rankIdx !== -1 ? rankIdx + 1 : 1;
-    const offset = employee.name.length % 2 === 0 ? 1 : -1;
-    const previousRank = Math.max(1, Math.min(rank + offset, sorted.length));
 
     return {
       rank,
       total: sorted.length,
-      previousRank,
+      previousRank: rank,
     };
-  }, [employees, kpis, achievements, employee]);
+  }, [employees, kpis, tasks, achievements, employee]);
 
   // Specific scorecard score computations
   const scores = useMemo(() => {
-    if (!employee) return { kpi: 0, weighted: 0, value: 0, overall: 0, tasks: 0, attendance: 0, consistency: 0, improvement: 0 };
-    
-    // KPI Score
-    const kpi = employeeKPIs.length > 0
-      ? Math.round(employeeKPIs.reduce((sum, k) => sum + k.score, 0) / employeeKPIs.length)
-      : Math.round(employee.overallScore || 0);
-
-    // Weighted Score
-    let weighted = kpi;
-    if (employeeKPIs.length > 0) {
-      let totalWeight = 0, weightedSum = 0;
-      employeeKPIs.forEach((k) => {
-        let weight = 1.0;
-        const cat = k.category?.toLowerCase();
-        if (cat === "engineering" || cat === "sales") weight = 1.25;
-        else if (cat === "support" || cat === "hr") weight = 0.75;
-        weightedSum += k.score * weight;
-        totalWeight += weight;
-      });
-      weighted = Math.round(weightedSum / totalWeight);
+    if (!employee) {
+      return {
+        kpi: 0,
+        weighted: 0,
+        execution: 0,
+        contribution: 0,
+        value: 0,
+        overall: 0,
+        tasks: 0,
+        attendance: 100,
+        consistency: 100,
+        improvement: 0,
+      };
     }
 
-    // Value Score
-    const pointsSum = employeeAchievements.reduce((sum, a) => sum + a.points, 0);
-    const value = Math.min(70 + Math.round(pointsSum / 2.5), 100);
+    const scorecard = calculateEmployeeScorecard(employee, kpis, tasks, achievements);
 
-    // Overall Performance
-    const overall = Math.round((kpi + weighted + value) / 3);
-
-    // Task Completion
-    const tasksCount = employeeTasks.length;
-    const tasksCompleted = employeeTasks.filter((t) => t.status === "completed").length;
-    const tasks = tasksCount > 0 ? Math.round((tasksCompleted / tasksCount) * 100) : 100;
-
-    // Attendance
-    const attendance = 95 + (employee.name.length % 5);
-
-    // Consistency
+    // Consistency based on real KPI variance
     let consistency = 100;
     if (employeeKPIs.length > 1) {
-      const allScores = employeeKPIs.map((k) => k.score);
+      const allScores = employeeKPIs.map((k) => (Number.isFinite(k.score) ? k.score : 0));
       const diff = Math.max(...allScores) - Math.min(...allScores);
-      consistency = 100 - diff;
+      consistency = Math.max(0, 100 - diff);
     }
 
-    // Improvement
-    const improvement = Math.min(65 + (employee.name.length % 30), 99);
+    const improvement =
+      scorecard.kpiCount > 0
+        ? Math.round((scorecard.completedKpiCount / scorecard.kpiCount) * 100)
+        : scorecard.kpiScore;
 
     return {
-      kpi,
-      weighted,
-      value,
-      overall,
-      tasks,
-      attendance,
+      kpi: scorecard.kpiScore,
+      weighted: scorecard.weightedKpiScore,
+      execution: scorecard.executionScore,
+      contribution: scorecard.contributionScore,
+      value: scorecard.valueScore,
+      overall: scorecard.overallScore,
+      tasks: scorecard.taskCompletionRate,
+      attendance: 100,
       consistency,
       improvement,
     };
-  }, [employee, employeeKPIs, employeeTasks, employeeAchievements]);
+  }, [employee, employeeKPIs, employeeTasks, employeeAchievements, kpis, tasks, achievements]);
 
   // Derived Performance badge theme mapping
   const badge = useMemo(() => {
-    if (scores.overall >= 90) return { label: "Elite Performer", color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10 font-extrabold stroke-[#10b981]" };
-    if (scores.overall >= 80) return { label: "High Achiever", color: "text-blue-400 border-blue-500/20 bg-blue-500/10 font-bold stroke-[#3b82f6]" };
-    if (scores.overall >= 70) return { label: "Solid Contributor", color: "text-purple-400 border-purple-500/20 bg-purple-500/10 font-medium stroke-[#a855f7]" };
-    if (scores.overall < 50) return { label: "Under Review", color: "text-red-400 border-red-500/20 bg-red-500/10 stroke-[#ef4444]" };
-    return { label: "Developing", color: "text-amber-400 border-amber-500/20 bg-amber-500/10 stroke-[#f59e0b]" };
-  }, [scores.overall]);
+    if (!employee) return { label: "Standard", color: "text-gray-400 border-white/10 bg-white/5 font-medium stroke-[#9ca3af]" };
+    const scorecard = calculateEmployeeScorecard(employee, kpis, tasks, achievements);
+    return scorecard.performanceBadge;
+  }, [employee, kpis, tasks, achievements]);
 
   const trend = useMemo(() => {
-    if (scores.overall >= 83) return { type: "up" as const, label: "Up", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
-    if (scores.overall < 72) return { type: "down" as const, label: "Down", color: "text-red-400 bg-red-500/10 border-red-500/20" };
-    return { type: "stable" as const, label: "Stable", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
-  }, [scores.overall]);
+    if (!employee) return { type: "stable" as const, label: "Stable", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+    const scorecard = calculateEmployeeScorecard(employee, kpis, tasks, achievements);
+    return scorecard.trend;
+  }, [employee, kpis, tasks, achievements]);
 
   // Status variety mapping
-  const status: "Active" | "On Leave" = employee && employee.name.length % 7 === 0 ? "On Leave" : "Active";
+  const status: "Active" | "On Leave" = "Active";
 
   // Recharts Monthly Score Breakdown Data
   const breakdownChartData = useMemo(() => {
     return [
-      { name: "KPI", Score: scores.kpi, color: "#3b82f6" },
-      { name: "Weighted KPI", Score: scores.weighted, color: "#10b981" },
-      { name: "Value Align", Score: scores.value, color: "#8b5cf6" },
-      { name: "Tasks", Score: scores.tasks, color: "#f59e0b" },
+      { name: "KPI (70%)", Score: scores.kpi, color: "#3b82f6" },
+      { name: "Execution (20%)", Score: scores.execution, color: "#10b981" },
+      { name: "Contribution (10%)", Score: scores.contribution, color: "#8b5cf6" },
+      { name: "Task Completion", Score: scores.tasks, color: "#f59e0b" },
       { name: "Attendance", Score: scores.attendance, color: "#06b6d4" },
       { name: "Consistency", Score: scores.consistency, color: "#ec4899" },
     ];

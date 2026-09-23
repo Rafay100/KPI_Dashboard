@@ -45,6 +45,8 @@ import {
 import type { Employee, KPI, Achievement, Task } from "@/types/models";
 
 // Model interface for processed employees
+import { calculateEmployeeScorecard } from "@/lib/scoring";
+
 interface ProcessedEmployee extends Employee {
   kpiScore: number;
   weightedKpiScore: number;
@@ -72,64 +74,22 @@ function EmployeeAnalyticsContent() {
     }
   }, [employees, kpis, achievements, tasks]);
 
-  // Map and compute scores for all employees dynamically
+  // Map and compute scores for all employees dynamically via centralized scoring engine
   const computedEmployees = useMemo((): ProcessedEmployee[] => {
     return employees.map((emp) => {
-      const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-      const empTasks = tasks.filter((t) => t.assignedTo?.toLowerCase() === emp.name.toLowerCase());
-      const empAchievements = achievements.filter((a) => a.employeeName?.toLowerCase() === emp.name.toLowerCase());
-
-      // KPI Score
-      const kpiScore = empKPIs.length > 0
-        ? Math.round(empKPIs.reduce((sum, k) => sum + k.score, 0) / empKPIs.length)
-        : Math.round(emp.overallScore || 0);
-
-      // Weighted KPI Score
-      let weightedKpiScore = kpiScore;
-      if (empKPIs.length > 0) {
-        let totalWeight = 0, weightedSum = 0;
-        empKPIs.forEach((k) => {
-          let weight = 1.0;
-          const cat = k.category?.toLowerCase();
-          if (cat === "engineering" || cat === "sales") weight = 1.25;
-          else if (cat === "support" || cat === "hr") weight = 0.75;
-          weightedSum += k.score * weight;
-          totalWeight += weight;
-        });
-        weightedKpiScore = Math.round(weightedSum / totalWeight);
-      }
-
-      // Achievement points and Value Score
-      const achievementPoints = empAchievements.reduce((sum, a) => sum + a.points, 0);
-      const valueScore = Math.min(70 + Math.round(achievementPoints / 2.5), 100);
-
-      // Task Completion
-      const tasksCompleted = empTasks.filter((t) => t.status === "completed").length;
-      const taskCompletion = empTasks.length > 0 ? Math.round((tasksCompleted / empTasks.length) * 100) : 100;
-
-      // Overall Score
-      const overallScore = Math.round((kpiScore + weightedKpiScore + valueScore) / 3);
-
-      // Status
-      const status = emp.name.length % 7 === 0 ? "On Leave" : "Active";
-
-      // Badge
-      let badgeLabel = "Developing";
-      if (overallScore >= 90) badgeLabel = "Elite Performer";
-      else if (overallScore >= 80) badgeLabel = "High Achiever";
-      else if (overallScore >= 70) badgeLabel = "Solid Contributor";
-      else if (overallScore < 50) badgeLabel = "Under Review";
+      const scorecard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+      const status: "Active" | "On Leave" = "Active";
 
       return {
         ...emp,
-        kpiScore,
-        weightedKpiScore,
-        valueScore,
-        achievementPoints,
-        taskCompletion,
-        overallScore,
+        kpiScore: scorecard.kpiScore,
+        weightedKpiScore: scorecard.weightedKpiScore,
+        valueScore: scorecard.valueScore,
+        achievementPoints: scorecard.achievementPoints,
+        taskCompletion: scorecard.taskCompletionRate,
+        overallScore: scorecard.overallScore,
         status,
-        badgeLabel,
+        badgeLabel: scorecard.performanceBadge.label,
       };
     });
   }, [employees, kpis, achievements, tasks]);

@@ -16,11 +16,16 @@ import {
   RefreshCw, 
   CheckCircle,
   Database,
-  Trash2
+  Trash2,
+  Menu
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 
-export function Header() {
+interface HeaderProps {
+  onOpenMobileSidebar?: () => void;
+}
+
+export function Header({ onOpenMobileSidebar }: HeaderProps) {
   const [isDark, setIsDark] = useState(true);
   const { data, isLoading } = useDashboardData();
   const {
@@ -93,17 +98,27 @@ export function Header() {
   }, [data?.kpis]);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0a0e1a]/80 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between gap-3 px-6">
+    <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-[#080d1a]/85 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
         
-        {/* Left Nav Controls */}
+        {/* Left Nav Controls & Mobile Menu */}
         <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+          {onOpenMobileSidebar && (
+            <button
+              onClick={onOpenMobileSidebar}
+              className="lg:hidden rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-slate-400 hover:text-white">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+          <Button variant="ghost" size="icon" className="hidden sm:inline-flex text-slate-400 hover:text-white">
             <ChevronRight className="h-5 w-5" />
           </Button>
+
           
           {/* Sync Status Indicator */}
           <div className="hidden sm:flex items-center space-x-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-2.5 py-0.5 text-[10px] text-green-400 font-semibold">

@@ -83,6 +83,25 @@ export class CSVAdapter extends BaseAdapter {
     };
   }
 
+  async createRecord(
+    tableName: string,
+    _fields: Record<string, unknown>
+  ): Promise<string> {
+    throw new Error(`Write operations are not supported by the CSV adapter (table: ${tableName}).`);
+  }
+
+  async updateRecord(
+    tableName: string,
+    id: string,
+    _fields: Record<string, unknown>
+  ): Promise<boolean> {
+    throw new Error(`Write operations are not supported by the CSV adapter (table: ${tableName}, id: ${id}).`);
+  }
+
+  async deleteRecord(tableName: string, id: string): Promise<boolean> {
+    throw new Error(`Write operations are not supported by the CSV adapter (table: ${tableName}, id: ${id}).`);
+  }
+
   getCapabilities(): AdapterCapabilities {
     return {
       supportsRealtime: false,
@@ -90,6 +109,7 @@ export class CSVAdapter extends BaseAdapter {
       supportsBulkOperations: true,
       supportsSearch: false,
       supportsFiltering: false,
+      supportsWrites: false,
       maxRecordsPerRequest: 1000,
     };
   }

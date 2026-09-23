@@ -53,6 +53,13 @@ import {
   Grid
 } from "lucide-react";
 import type { Department, Employee, KPI, Achievement, Task } from "@/types/models";
+import {
+  calculateDepartmentScorecard,
+  calculateEmployeeScorecard,
+  calculateTaskExecutionMetrics,
+  matchesDepartment,
+  matchesEmployee,
+} from "@/lib/scoring";
 
 // Style helpers
 const getKPIStatusStyle = (status: string) => {
@@ -113,123 +120,110 @@ function DepartmentScorecardContent() {
   const deptEmployees = useMemo(() => {
     if (!department) return [];
     return employees.filter(
-      (e) => e.department?.toLowerCase() === department.departmentName?.toLowerCase()
+      (e) => matchesDepartment(e.departmentId, department) || matchesDepartment(e.department, department)
     );
   }, [employees, department]);
 
-  const deptEmpNames = useMemo(() => deptEmployees.map((e) => e.name.toLowerCase()), [deptEmployees]);
-
   const deptKPIs = useMemo(() => {
     if (!department) return [];
-    return kpis.filter(
-      (k) => k.departmentId?.toLowerCase() === department.departmentName?.toLowerCase()
-    );
+    return kpis.filter((k) => matchesDepartment(k.departmentId, department));
   }, [kpis, department]);
 
   const deptTasks = useMemo(() => {
-    return tasks.filter((t) => deptEmpNames.includes(t.assignedTo?.toLowerCase()));
-  }, [tasks, deptEmpNames]);
+    return tasks.filter((t) =>
+      deptEmployees.some((e) => matchesEmployee(t.assignedToId || t.assignedTo, e))
+    );
+  }, [tasks, deptEmployees]);
 
   const deptAchievements = useMemo(() => {
-    return achievements.filter((a) => deptEmpNames.includes(a.employeeName?.toLowerCase()));
-  }, [achievements, deptEmpNames]);
+    return achievements.filter((a) =>
+      deptEmployees.some((e) => matchesEmployee(a.employeeId || a.employeeName, e))
+    );
+  }, [achievements, deptEmployees]);
 
   // Compute stats rankings
   const rankings = useMemo(() => {
     if (departments.length === 0) return { rank: 1, total: 1, previousRank: 1 };
-    
-    const sorted = departments.map((d) => {
-      const dEmployees = employees.filter((e) => e.department?.toLowerCase() === d.departmentName?.toLowerCase());
-      const dKPIs = kpis.filter((k) => k.departmentId?.toLowerCase() === d.departmentName?.toLowerCase());
-      
-      const dKPIsCount = dKPIs.length;
-      const dAvgKPI = dKPIsCount > 0 ? Math.round(dKPIs.reduce((sum, k) => sum + k.score, 0) / dKPIsCount) : d.averageScore;
-      
-      const dAvgPerformance = dEmployees.length > 0
-        ? Math.round(dEmployees.reduce((sum, emp) => {
-            const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-            const kScore = empKPIs.length > 0 ? Math.round(empKPIs.reduce((s, k) => s + k.score, 0) / empKPIs.length) : emp.overallScore;
-            return sum + kScore;
-          }, 0) / dEmployees.length)
-        : d.averageScore;
 
-      const dAchievements = achievements.filter((a) => dEmployees.map((e) => e.name.toLowerCase()).includes(a.employeeName?.toLowerCase()));
-      const dPoints = dAchievements.reduce((sum, a) => sum + a.points, 0);
-      const dValue = Math.min(70 + Math.round(dPoints / 5), 100);
-      
-      const overall = Math.round((dAvgKPI + dAvgPerformance + dValue) / 3);
-      return { id: d.id, score: overall };
-    }).sort((a, b) => b.score - a.score);
+    const sorted = departments
+      .map((d) => {
+        const scorecard = calculateDepartmentScorecard(d, employees, kpis, tasks, achievements);
+        return { id: d.id, score: scorecard.score };
+      })
+      .sort((a, b) => b.score - a.score);
 
     if (!department) return { rank: 1, total: sorted.length, previousRank: 1 };
 
     const rankIdx = sorted.findIndex((s) => s.id === department.id);
     const rank = rankIdx !== -1 ? rankIdx + 1 : 1;
-    const offset = department.departmentName.length % 2 === 0 ? 1 : -1;
-    const previousRank = Math.max(1, Math.min(rank + offset, sorted.length));
 
     return {
       rank,
       total: sorted.length,
-      previousRank,
+      previousRank: rank,
     };
-  }, [departments, employees, kpis, achievements, department]);
+  }, [departments, employees, kpis, tasks, achievements, department]);
 
   // Compute scorecard aggregates
   const scores = useMemo(() => {
-    if (!department) return { kpi: 0, performance: 0, value: 0, overall: 0, completion: 0, points: 0, activeKPIs: 0, completedKPIs: 0, missedKPIs: 0, atRiskKPIs: 0, teams: 0, employees: 0 };
+    if (!department) {
+      return {
+        kpi: 0,
+        execution: 0,
+        contribution: 0,
+        performance: 0,
+        value: 0,
+        overall: 0,
+        completion: 0,
+        points: 0,
+        activeKPIs: 0,
+        completedKPIs: 0,
+        missedKPIs: 0,
+        atRiskKPIs: 0,
+        teams: 0,
+        employees: 0,
+        monthlyGrowth: 0,
+      };
+    }
 
+    const deptCard = calculateDepartmentScorecard(department, employees, kpis, tasks, achievements);
     const activeKPIs = deptKPIs.length;
     const completedKPIs = deptKPIs.filter((k) => k.status === "completed").length;
     const missedKPIs = deptKPIs.filter((k) => k.status === "overdue").length;
     const atRiskKPIs = deptKPIs.filter((k) => k.status === "at-risk").length;
 
-    // KPI Score
-    const kpi = activeKPIs > 0
-      ? Math.round(deptKPIs.reduce((sum, k) => sum + k.score, 0) / activeKPIs)
-      : Math.round(department.averageScore || 0);
-
-    // Performance Score
-    const performance = deptEmployees.length > 0
-      ? Math.round(deptEmployees.reduce((sum, emp) => {
-          const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-          const kScore = empKPIs.length > 0 ? Math.round(empKPIs.reduce((s, k) => s + k.score, 0) / empKPIs.length) : emp.overallScore;
-          return sum + kScore;
-        }, 0) / deptEmployees.length)
-      : Math.round(department.averageScore || 0);
-
-    // Value Score
-    const points = deptAchievements.reduce((sum, a) => sum + a.points, 0);
-    const value = Math.min(70 + Math.round(points / 5), 100);
-
-    // Overall Department Score
-    const overall = Math.round((kpi + performance + value) / 3);
-
-    // Completion Rate
-    const completion = activeKPIs > 0 ? Math.round((completedKPIs / activeKPIs) * 100) : 100;
+    // Performance Score across department staff
+    const performance =
+      deptEmployees.length > 0
+        ? Math.round(
+            deptEmployees.reduce((sum, emp) => {
+              const empCard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+              return sum + empCard.overallScore;
+            }, 0) / deptEmployees.length
+          )
+        : deptCard.score;
 
     // Teams
     const teams = Array.from(new Set(deptEmployees.map((e) => e.team).filter(Boolean))).length;
 
-    // Monthly growth MoM index
-    const monthlyGrowth = Math.min(10 + (department.departmentName.length % 5) * 4, 30);
-
     return {
-      kpi,
+      kpi: deptCard.kpiScore,
+      execution: deptCard.executionScore,
+      contribution: deptCard.contributionScore,
       performance,
-      value,
-      overall,
-      completion,
-      points,
+      value: deptCard.contributionScore,
+      overall: deptCard.score,
+      completion: deptCard.kpiCompletionRate,
+      points: deptCard.achievementPoints,
       activeKPIs,
       completedKPIs,
       missedKPIs,
       atRiskKPIs,
       teams,
-      monthlyGrowth,
       employees: deptEmployees.length,
+      monthlyGrowth: Math.round(deptCard.score * 0.05),
     };
-  }, [department, deptEmployees, deptKPIs, deptAchievements, kpis]);
+  }, [department, deptEmployees, deptKPIs, deptAchievements, employees, kpis, tasks, achievements]);
 
   // Derived Trend
   const trend = useMemo(() => {
@@ -245,20 +239,24 @@ function DepartmentScorecardContent() {
 
   // Section 1: Top Employees in Department (sorted by employee's dynamic overall score)
   const topEmployees = useMemo(() => {
-    return deptEmployees.map((emp) => {
-      const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-      const score = empKPIs.length > 0 ? Math.round(empKPIs.reduce((sum, k) => sum + k.score, 0) / empKPIs.length) : emp.overallScore;
-      return { ...emp, score };
-    }).sort((a, b) => b.score - a.score).slice(0, 5);
-  }, [deptEmployees, kpis]);
+    return deptEmployees
+      .map((emp) => {
+        const scorecard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+        return { ...emp, score: scorecard.overallScore };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }, [deptEmployees, kpis, tasks, achievements]);
 
   // Section 2: Task Summary categorizer
   const taskSummary = useMemo(() => {
-    const counts = { todo: 0, "in-progress": 0, completed: 0, blocked: 0 };
-    deptTasks.forEach((t) => {
-      if (t.status in counts) counts[t.status as keyof typeof counts] += 1;
-    });
-    return counts;
+    const metrics = calculateTaskExecutionMetrics(deptTasks);
+    return {
+      todo: metrics.todo,
+      "in-progress": metrics.inProgress,
+      completed: metrics.completed,
+      blocked: metrics.blocked,
+    };
   }, [deptTasks]);
 
   // Section 3: KPI Categories averages

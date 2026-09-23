@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { useDepartments, useEmployees, useKPIs, useAchievements } from "@/hooks/useData";
+import { useDepartments, useEmployees, useKPIs, useAchievements, useTasks } from "@/hooks/useData";
 import { Button } from "@/components/ui/Button";
 import {
   Building2,
@@ -26,6 +26,7 @@ import {
   Clock
 } from "lucide-react";
 import type { Department, Employee, KPI, Achievement } from "@/types/models";
+import { calculateDepartmentScorecard } from "@/lib/scoring";
 
 // Model interface for computed department metrics
 interface ComputedDepartment extends Department {
@@ -51,6 +52,7 @@ function DepartmentRankingsContent() {
   const { data: employees = [], isLoading: isEmployeesLoading } = useEmployees();
   const { data: kpis = [], isLoading: isKPIsLoading } = useKPIs();
   const { data: achievements = [], isLoading: isAchievementsLoading } = useAchievements();
+  const { data: tasks = [] } = useTasks();
 
   // Local state controls
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,77 +70,43 @@ function DepartmentRankingsContent() {
     }
   }, [departments, employees, kpis, achievements]);
 
-  // Compute stats and scores dynamically for all departments
+  // Compute stats and scores dynamically for all departments via centralized scoring engine
   const computedDepartments = useMemo((): ComputedDepartment[] => {
-    // 1. Calculate values
+    // 1. Calculate values via centralized scoring scorecard
     const list = departments.map((dept) => {
+      const scorecard = calculateDepartmentScorecard(dept, employees, kpis, [], achievements);
       const deptEmployees = employees.filter(
         (e) => 
           e.department?.toLowerCase() === dept.departmentName?.toLowerCase() ||
           e.department?.toLowerCase() === dept.id?.toLowerCase() ||
           e.departmentId?.toLowerCase() === dept.id?.toLowerCase()
       );
-      
-      const deptKPIs = kpis.filter(
-        (k) => 
-          k.departmentId?.toLowerCase() === dept.departmentName?.toLowerCase() ||
-          k.departmentId?.toLowerCase() === dept.id?.toLowerCase()
-      );
 
       // Teams Count
       const teams = deptEmployees.map((e) => e.team).filter(Boolean);
       const teamsCount = Array.from(new Set(teams)).length;
 
-      // Active KPIs
-      const activeKPIsCount = deptKPIs.length;
-
-      // Completion Rate
-      const completed = deptKPIs.filter((k) => k.status === "completed").length;
-      const kpiCompletionRate = activeKPIsCount > 0 ? Math.round((completed / activeKPIsCount) * 100) : 100;
-
-      // Average KPI Score
-      const averageKpiScore = activeKPIsCount > 0
-        ? Math.round(deptKPIs.reduce((sum, k) => sum + k.score, 0) / activeKPIsCount)
-        : Math.round(dept.averageScore || 0);
-
-      // Average Performance Score
-      const averagePerformanceScore = deptEmployees.length > 0
-        ? Math.round(deptEmployees.reduce((sum, emp) => {
-            const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-            const kScore = empKPIs.length > 0 ? Math.round(empKPIs.reduce((s, k) => s + k.score, 0) / empKPIs.length) : emp.overallScore;
-            return sum + kScore;
-          }, 0) / deptEmployees.length)
-        : Math.round(dept.averageScore || 0);
-
-      // Achievement Points
-      const deptEmpNames = deptEmployees.map((e) => e.name.toLowerCase());
-      const deptAchievements = achievements.filter((a) => deptEmpNames.includes(a.employeeName?.toLowerCase()));
-      const achievementPoints = deptAchievements.reduce((sum, a) => sum + a.points, 0);
-
-      // Overall Department Score (KPI average + Employee performance average + Achievements baseline)
-      const valueScore = Math.min(70 + Math.round(achievementPoints / 5), 100);
-      const overallDepartmentScore = Math.round((averageKpiScore + averagePerformanceScore + valueScore) / 3);
-
-      // Manager / HoD
-      const manager = dept.headOfDepartment || "—";
-
       // Status
-      const status: "On Track" | "Needs Attention" = overallDepartmentScore >= 75 ? "On Track" : "Needs Attention";
+      const status: "On Track" | "Needs Attention" = scorecard.score >= 75 ? "On Track" : "Needs Attention";
 
       return {
         ...dept,
-        manager,
+        manager: scorecard.head,
         teamsCount,
-        activeKPIsCount,
-        kpiCompletionRate,
-        averageKpiScore,
-        averagePerformanceScore,
-        achievementPoints,
-        overallDepartmentScore,
+        activeKPIsCount: scorecard.activeKPIs,
+        kpiCompletionRate: scorecard.kpiCompletionRate,
+        averageKpiScore: scorecard.score,
+        averagePerformanceScore: scorecard.score,
+        achievementPoints: scorecard.achievementPoints,
+        overallDepartmentScore: scorecard.score,
         status,
         rank: 1,
         previousRank: 1,
-        trend: { type: "stable" as const, label: "Stable", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+        trend: { 
+          type: scorecard.trend, 
+          label: scorecard.trend === "up" ? "Up" : scorecard.trend === "down" ? "Down" : "Stable", 
+          color: scorecard.trend === "up" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" : scorecard.trend === "down" ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-amber-400 bg-amber-500/10 border-amber-500/20" 
+        },
       };
     });
 
@@ -147,31 +115,13 @@ function DepartmentRankingsContent() {
 
     return sortedList.map((dept, index) => {
       const rank = index + 1;
-      const offset = dept.departmentName.length % 3 === 0 ? 1 : dept.departmentName.length % 3 === 1 ? -1 : 0;
-      const previousRank = Math.max(1, Math.min(rank + offset, sortedList.length));
-
-      // Trend mapping
-      let trendType: "up" | "down" | "stable" = "stable";
-      let trendLabel = "Stable";
-      let trendColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-      if (previousRank > rank) {
-        trendType = "up";
-        trendLabel = "Up";
-        trendColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-      } else if (previousRank < rank) {
-        trendType = "down";
-        trendLabel = "Down";
-        trendColor = "text-red-400 bg-red-500/10 border-red-500/20";
-      }
-
       return {
         ...dept,
         rank,
-        previousRank,
-        trend: { type: trendType, label: trendLabel, color: trendColor },
+        previousRank: rank,
       };
     });
-  }, [departments, employees, kpis, achievements]);
+  }, [departments, employees, kpis, achievements, tasks]);
 
   // Search filter processing
   const filteredDepartments = useMemo(() => {

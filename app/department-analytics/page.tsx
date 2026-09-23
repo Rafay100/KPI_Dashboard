@@ -44,6 +44,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import type { Department, Employee, KPI, Achievement, Task } from "@/types/models";
+import { calculateDepartmentScorecard } from "@/lib/scoring";
 
 // Leaderboard row model interface
 interface DepartmentAnalyticsItem extends Department {
@@ -55,8 +56,6 @@ interface DepartmentAnalyticsItem extends Department {
   averagePerformanceScore: number;
   achievementPoints: number;
   overallDepartmentScore: number;
-  improvementRate: number;
-  monthlyGrowth: number;
   rank: number;
 }
 
@@ -82,71 +81,27 @@ function DepartmentAnalyticsContent() {
   // Compute analytics standings for all departments
   const analyticsItems = useMemo((): DepartmentAnalyticsItem[] => {
     const list = departments.map((dept) => {
+      const scorecard = calculateDepartmentScorecard(dept, employees, kpis, tasks, achievements);
+
       const deptEmployees = employees.filter(
-        (e) => 
+        (e) =>
           e.department?.toLowerCase() === dept.departmentName?.toLowerCase() ||
           e.department?.toLowerCase() === dept.id?.toLowerCase() ||
           e.departmentId?.toLowerCase() === dept.id?.toLowerCase()
       );
-      
-      const deptKPIs = kpis.filter(
-        (k) => 
-          k.departmentId?.toLowerCase() === dept.departmentName?.toLowerCase() ||
-          k.departmentId?.toLowerCase() === dept.id?.toLowerCase()
-      );
-
-      // Teams count
       const teams = deptEmployees.map((e) => e.team).filter(Boolean);
       const teamsCount = Array.from(new Set(teams)).length;
 
-      // Active KPIs
-      const activeKPIsCount = deptKPIs.length;
-
-      // Completion Rate
-      const completed = deptKPIs.filter((k) => k.status === "completed").length;
-      const kpiCompletionRate = activeKPIsCount > 0 ? Math.round((completed / activeKPIsCount) * 100) : 100;
-
-      // Average KPI Score
-      const averageKpiScore = activeKPIsCount > 0
-        ? Math.round(deptKPIs.reduce((sum, k) => sum + k.score, 0) / activeKPIsCount)
-        : Math.round(dept.averageScore || 0);
-
-      // Average Performance Score
-      const averagePerformanceScore = deptEmployees.length > 0
-        ? Math.round(deptEmployees.reduce((sum, emp) => {
-            const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-            const kScore = empKPIs.length > 0 ? Math.round(empKPIs.reduce((s, k) => s + k.score, 0) / empKPIs.length) : emp.overallScore;
-            return sum + kScore;
-          }, 0) / deptEmployees.length)
-        : Math.round(dept.averageScore || 0);
-
-      // Achievement Points
-      const deptEmpNames = deptEmployees.map((e) => e.name.toLowerCase());
-      const deptAchievements = achievements.filter((a) => deptEmpNames.includes(a.employeeName?.toLowerCase()));
-      const achievementPoints = deptAchievements.reduce((sum, a) => sum + a.points, 0);
-
-      // Overall Score
-      const valueScore = Math.min(70 + Math.round(achievementPoints / 5), 100);
-      const overallDepartmentScore = Math.round((averageKpiScore + averagePerformanceScore + valueScore) / 3);
-
-      // MoM indexes
-      const monthlyGrowth = Math.min(10 + (dept.departmentName.length % 5) * 4, 30);
-      const improvementRate = 60 + (dept.departmentName.length % 20) + (dept.id.charCodeAt(0) % 15);
-
-      const manager = dept.headOfDepartment || "—";
-
       return {
         ...dept,
-        manager,
+        manager: scorecard.head,
         teamsCount,
-        activeKPIsCount,
-        kpiCompletionRate,
-        averageKpiScore,
-        averagePerformanceScore,
-        achievementPoints,
-        overallDepartmentScore,
-        improvementRate,
-        monthlyGrowth,
+        activeKPIsCount: scorecard.activeKPIs,
+        kpiCompletionRate: scorecard.kpiCompletionRate,
+        averageKpiScore: scorecard.score,
+        averagePerformanceScore: scorecard.score,
+        achievementPoints: scorecard.achievementPoints,
+        overallDepartmentScore: scorecard.score,
         rank: 1,
       };
     });
@@ -157,7 +112,7 @@ function DepartmentAnalyticsContent() {
         ...dept,
         rank: index + 1,
       }));
-  }, [departments, employees, kpis, achievements]);
+  }, [departments, employees, kpis, achievements, tasks]);
 
   // Cards calculations (6 Cards)
   const cards = useMemo(() => {

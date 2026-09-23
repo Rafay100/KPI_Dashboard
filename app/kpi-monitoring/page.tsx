@@ -24,10 +24,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
+import { calculateKPIStatus, calculateKPIScore } from "@/lib/scoring";
+import { useGlobalFilters } from "@/hooks/useGlobalFilters";
+
 export default function KPIMonitoringPage() {
   const { data: kpis, isLoading: isKPIsLoading, isError, refetch } = useKPIs();
   const { data: employees } = useEmployees();
   const { data: departments } = useDepartments();
+  const { filters } = useGlobalFilters();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
@@ -44,30 +48,39 @@ export default function KPIMonitoringPage() {
 
   // Helper to map employee ID to Name
   const getEmployeeName = (empId: string) => {
-    const emp = employees?.find((e) => e.id === empId);
+    const emp = employees?.find((e) => e.id === empId || e.name.toLowerCase() === empId.toLowerCase());
     return emp ? emp.name : "Unassigned";
   };
 
   // Helper to map department ID to Name
   const getDepartmentName = (deptId: string) => {
-    const dept = departments?.find((d) => d.id === deptId);
+    const dept = departments?.find((d) => d.id === deptId || d.departmentName.toLowerCase() === deptId.toLowerCase());
     return dept ? dept.departmentName : deptId;
   };
 
-  // Dynamically calculate KPI Status & health based on Score
+  // Standardized KPI Status & health using calculateKPIStatus
   const getKPIHealth = (kpi: KPI) => {
-    const score = kpi.score ?? 0;
-    if (score >= 90 || kpi.status === "completed") {
+    const score = Number.isFinite(kpi.score) ? kpi.score : calculateKPIScore({ actualValue: kpi.actualValue, targetValue: kpi.targetValue });
+    const computedStatus = calculateKPIStatus({
+      actualValue: kpi.actualValue,
+      targetValue: kpi.targetValue,
+      score,
+      dueDate: kpi.dueDate,
+    });
+
+    if (computedStatus === "Completed" || computedStatus === "Overachieved" || computedStatus === "On Track") {
       return {
         label: "On Track",
+        statusText: computedStatus,
         color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
         barColor: "bg-emerald-500",
         severity: "success" as const,
         icon: CheckCircle2,
       };
-    } else if (score >= 70) {
+    } else if (computedStatus === "Behind" || computedStatus === "Awaiting Data" || computedStatus === "Awaiting Approval") {
       return {
         label: "Warning",
+        statusText: computedStatus,
         color: "text-amber-400 bg-amber-500/10 border-amber-500/30",
         barColor: "bg-amber-500",
         severity: "warning" as const,
@@ -76,6 +89,7 @@ export default function KPIMonitoringPage() {
     } else {
       return {
         label: "Critical",
+        statusText: computedStatus,
         color: "text-rose-400 bg-rose-500/10 border-rose-500/30",
         barColor: "bg-rose-500",
         severity: "error" as const,
@@ -84,27 +98,33 @@ export default function KPIMonitoringPage() {
     }
   };
 
-  // Filtering
+  // Filtering incorporating local and global filters
   const filteredKPIs = useMemo(() => {
     return (kpis || []).filter((kpi) => {
+      // Global department filter fallback
+      const activeDept = selectedDept !== "all" ? selectedDept : (filters.department || "all");
+      const deptMatch = activeDept === "all" || 
+        kpi.departmentId?.toLowerCase() === activeDept.toLowerCase() ||
+        getDepartmentName(kpi.departmentId).toLowerCase() === activeDept.toLowerCase();
+
       // Search match
       const query = searchQuery.toLowerCase();
-      const nameMatch = kpi.kpiName.toLowerCase().includes(query) || kpi.description.toLowerCase().includes(query);
-      
-      // Department match
-      const deptMatch = selectedDept === "all" || kpi.departmentId === selectedDept;
+      const nameMatch = !searchQuery || kpi.kpiName.toLowerCase().includes(query) || (kpi.description && kpi.description.toLowerCase().includes(query));
 
-      // Status match based on computed score
+      // Status match based on standardized computed score & status
       const health = getKPIHealth(kpi);
-      const statusMatch = selectedStatus === "all" || health.label.toLowerCase() === selectedStatus.toLowerCase();
+      const activeStatus = selectedStatus !== "all" ? selectedStatus : (filters.kpiStatus || "all");
+      const statusMatch = activeStatus === "all" || 
+        health.label.toLowerCase() === activeStatus.toLowerCase() ||
+        health.statusText.toLowerCase() === activeStatus.toLowerCase();
 
       return nameMatch && deptMatch && statusMatch;
     });
-  }, [kpis, searchQuery, selectedDept, selectedStatus]);
+  }, [kpis, searchQuery, selectedDept, selectedStatus, filters, departments]);
 
   // Statistics Computations
   const stats = useMemo(() => {
-    const list = kpis || [];
+    const list = filteredKPIs;
     const total = list.length;
     let onTrack = 0;
     let warning = 0;
@@ -117,20 +137,20 @@ export default function KPIMonitoringPage() {
       else critical++;
     });
 
-    const avgScore = total > 0 ? Math.round(list.reduce((sum, k) => sum + (k.score || 0), 0) / total) : 0;
+    const avgScore = total > 0 ? Math.round(list.reduce((sum, k) => sum + (Number.isFinite(k.score) ? k.score : 0), 0) / total) : 0;
 
     return { total, onTrack, warning, critical, avgScore };
-  }, [kpis]);
+  }, [filteredKPIs]);
 
   // Breached/Alert list
   const activeAlerts = useMemo(() => {
-    return (kpis || [])
+    return filteredKPIs
       .filter((k) => {
         const health = getKPIHealth(k);
         return health.label === "Critical" || health.label === "Warning";
       })
       .slice(0, 5);
-  }, [kpis]);
+  }, [filteredKPIs]);
 
   // CSV Export Handler
   const handleExportCSV = () => {

@@ -19,9 +19,15 @@ import { AIRTABLE_FIELD_MAPPINGS } from "@/config/airtable-field-mappings";
 function getFieldValue(fields: Record<string, unknown>, candidates: string[]): unknown {
   if (!fields) return undefined;
 
+  const isNonEmpty = (val: unknown) => {
+    if (val === undefined || val === null) return false;
+    if (typeof val === "string" && val.trim() === "") return false;
+    return true;
+  };
+
   // 1. Direct match first
   for (const candidate of candidates) {
-    if (candidate && candidate in fields && fields[candidate] !== undefined && fields[candidate] !== null) {
+    if (candidate && candidate in fields && isNonEmpty(fields[candidate])) {
       return fields[candidate];
     }
   }
@@ -38,13 +44,15 @@ function getFieldValue(fields: Record<string, unknown>, candidates: string[]): u
   for (const candidate of candidates) {
     if (!candidate) continue;
     const normCandidate = normalize(candidate);
-    if (normCandidate in normalizedFields && normalizedFields[normCandidate] !== undefined && normalizedFields[normCandidate] !== null) {
+    if (normCandidate in normalizedFields && isNonEmpty(normalizedFields[normCandidate])) {
       return normalizedFields[normCandidate];
     }
   }
 
   return undefined;
 }
+
+import { calculateKPIStatus } from "@/lib/kpis/calculateKPIStatus";
 
 /**
  * Map Airtable KPI record to normalized KPI model - USING ACTUAL AIRTABLE FIELD NAMES
@@ -54,25 +62,57 @@ export function mapKPIFromAirtable(
 ): KPI {
   const fields = record.fields as Record<string, unknown>;
 
+  const score = safeNumber(getFieldValue(fields, ["Score", "score"]));
+  const targetValue = safeNumber(getFieldValue(fields, ["Target Value", "target", "Target", "targetValue", "target_value"]));
+  const actualValue = safeNumber(getFieldValue(fields, ["Actual Value", "actual", "Actual", "actualValue", "actual_value"]));
+  const dueDate = formatDateISO(safeString(getFieldValue(fields, ["Due Date", "due_date"])));
+  const rawStatus = safeString(getFieldValue(fields, ["Status", "status"]));
+
+  const status = rawStatus
+    ? normalizeKPIStatus(rawStatus)
+    : normalizeKPIStatus(
+        calculateKPIStatus({
+          actualValue,
+          targetValue,
+          score,
+          dueDate: dueDate || "",
+        })
+      );
+
+  // Resolve department and employee references using possible field names
+  // Relationship Rule:
+  // - If employee_id exists, use employee_id.
+  // - If employee_id is empty but owner_employee_id exists, use owner_employee_id.
+  const employeeId = safeString(
+    getFieldValue(fields, ["employee_id", "Employee ID", "Assigned Employee", "assignedEmployee", "Employee", "employeeId"]) ||
+    getFieldValue(fields, ["owner_employee_id", "owner", "Owner", "owner_id", "Owner ID", "ownerId"])
+  );
+  const owner = safeString(
+    getFieldValue(fields, ["owner_employee_id", "owner", "Owner", "owner_id", "Owner ID", "ownerId"]) ||
+    getFieldValue(fields, ["employee_id", "Employee ID", "Assigned Employee", "assignedEmployee", "Employee", "employeeId"])
+  );
+  const departmentId = safeString(
+    getFieldValue(fields, ["department_id", "Department ID", "Department", "Dept", "department", "dept_id"])
+  );
+
   // Use ACTUAL Airtable column names with robust matching
   return {
     id: record.id,
     kpiName: safeString(getFieldValue(fields, ["KPI Name", "name", "Name", "title", "Title"])) || `KPI-${record.id.slice(0, 8)}`,
     description: safeString(fields["Description"] || fields["Notes"] || fields["description"] || fields["notes"]),
-    // Resolve department and employee references using possible field names
-    departmentId: safeString(getFieldValue(fields, ["Department ID", "Department", "Dept", "department", "department_id"])),
-    employeeId: safeString(getFieldValue(fields, ["Employee ID", "Assigned Employee", "Employee", "assignedEmployee", "owner_employee_id"])),
-    targetValue: safeNumber(getFieldValue(fields, ["Target Value", "target", "Target", "targetValue", "target_value"])),
-    actualValue: safeNumber(getFieldValue(fields, ["Actual Value", "actual", "Actual", "actualValue", "actual_value"])),
-    status: normalizeKPIStatus(safeString(getFieldValue(fields, ["Status", "status"]))),
-    score: safeNumber(getFieldValue(fields, ["Score", "score"])),
-    dueDate: formatDateISO(safeString(getFieldValue(fields, ["Due Date", "due_date"]))),
+    departmentId,
+    employeeId,
+    targetValue,
+    actualValue,
+    status,
+    score,
+    dueDate,
     lastUpdated: formatDateISO(safeString(getFieldValue(fields, ["Last Updated", "Modified", "updated_at"]))) || new Date().toISOString(),
     createdAt: formatDateISO(safeString(getFieldValue(fields, ["Created Date", "Created", "created_at"]))) || new Date().toISOString(),
     code: safeString(getFieldValue(fields, ["ID", "id", "kpi_code"])),
     category: safeString(getFieldValue(fields, ["Category", "category"])),
     team: safeString(getFieldValue(fields, ["Team", "team", "team_id"])),
-    owner: safeString(getFieldValue(fields, ["Owner", "owner", "owner_employee_id"])),
+    owner,
     frequency: safeString(getFieldValue(fields, ["Frequency", "frequency"])),
     unit: safeString(getFieldValue(fields, ["Unit", "unit", "measurement_unit"])),
   };
@@ -190,6 +230,8 @@ function normalizeKPIStatus(
     case "not-started":
     case "not started":
     case "pending":
+    case "awaiting-data":
+    case "awaiting-approval":
       return "not-started";
     case "in-progress":
     case "in progress":
@@ -209,6 +251,7 @@ function normalizeKPIStatus(
       return "completed";
     case "overdue":
     case "late":
+    case "missed":
       return "overdue";
     default:
       return "not-started";

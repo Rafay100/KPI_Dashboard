@@ -70,6 +70,7 @@ export interface AdapterCapabilities {
   supportsBulkOperations: boolean;
   supportsSearch: boolean;
   supportsFiltering: boolean;
+  supportsWrites: boolean;
   maxRecordsPerRequest: number;
 }
 

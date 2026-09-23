@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import Link from "next/link";
 import { useDashboardData } from "@/hooks/useData";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -7,131 +9,169 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { KPIProgressChart } from "@/components/charts/KPIProgressChart";
 import { TaskStatusChart } from "@/components/charts/TaskStatusChart";
-import { ActivityCard, ActivityItem } from "@/components/dashboard/ActivityCard";
+import { Button } from "@/components/ui/Button";
 import { 
   Trophy, 
   Users, 
   Target, 
   CheckSquare, 
+  Building2, 
+  RefreshCw,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
+  ShieldAlert,
   Award,
   Zap,
-  Building2,
-  RefreshCw
+  Flame,
+  ArrowUpRight
 } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "@/components/ui/Button";
+
+import { 
+  calculateExecutiveOverviewMetrics, 
+  calculateDepartmentScorecard, 
+  calculateEmployeeScorecard, 
+  calculateHistoricalTrend,
+  calculateTaskExecutionMetrics,
+  matchesDepartment,
+  matchesEmployee
+} from "@/lib/scoring";
+import { useGlobalFilters } from "@/hooks/useGlobalFilters";
 
 export default function ExecutiveOverview() {
   const { data, isLoading, isError, refetch } = useDashboardData();
+  const { filters } = useGlobalFilters();
 
-  // Extract raw dashboard arrays
-  const kpis = useMemo(() => data?.kpis || [], [data]);
-  const employees = useMemo(() => data?.employees || [], [data]);
-  const departments = useMemo(() => data?.departments || [], [data]);
-  const tasks = useMemo(() => data?.tasks || [], [data]);
-  const achievements = useMemo(() => data?.achievements || [], [data]);
+  const rawKpis = useMemo(() => data?.kpis || [], [data]);
+  const rawEmployees = useMemo(() => data?.employees || [], [data]);
+  const rawDepartments = useMemo(() => data?.departments || [], [data]);
+  const rawTasks = useMemo(() => data?.tasks || [], [data]);
+  const rawAchievements = useMemo(() => data?.achievements || [], [data]);
 
-  // Compute stats
-  const stats = useMemo(() => {
-    // 1. KPI Completion
-    const completedKPIs = kpis.filter(k => k.status === "completed").length;
-    const kpiCompletionRate = kpis.length > 0 
-      ? Math.round((completedKPIs / kpis.length) * 100) 
-      : 0;
+  // Apply Global Filters if set
+  const filteredData = useMemo(() => {
+    let k = [...rawKpis];
+    let e = [...rawEmployees];
+    let d = [...rawDepartments];
+    let t = [...rawTasks];
+    let a = [...rawAchievements];
 
-    // 2. Task Completion
-    const completedTasks = tasks.filter(t => t.status === "completed").length;
-    const taskCompletionRate = tasks.length > 0 
-      ? Math.round((completedTasks / tasks.length) * 100) 
-      : 0;
+    // Department Filter
+    if (filters.department) {
+      const targetDept = filters.department.toLowerCase();
+      d = d.filter((dept) => dept.departmentName?.toLowerCase() === targetDept || dept.id?.toLowerCase() === targetDept);
+      e = e.filter((emp) => emp.department?.toLowerCase() === targetDept || emp.departmentId?.toLowerCase() === targetDept);
+      k = k.filter((kpi) => kpi.departmentId?.toLowerCase() === targetDept);
+      t = t.filter((task) => e.some((emp) => matchesEmployee(task.assignedToId || task.assignedTo, emp)));
+      a = a.filter((ach) => e.some((emp) => matchesEmployee(ach.employeeId || ach.employeeName, emp)));
+    }
 
-    // 3. Achievement Points
-    const totalPoints = achievements.reduce((sum, a) => sum + (a.points || 0), 0);
+    // Employee Filter
+    if (filters.employee) {
+      const targetEmp = filters.employee.toLowerCase();
+      e = e.filter((emp) => emp.name.toLowerCase() === targetEmp || emp.id.toLowerCase() === targetEmp);
+      k = k.filter((kpi) => e.some((emp) => matchesEmployee(kpi.employeeId, emp)));
+      t = t.filter((task) => e.some((emp) => matchesEmployee(task.assignedToId || task.assignedTo, emp)));
+      a = a.filter((ach) => e.some((emp) => matchesEmployee(ach.employeeId || ach.employeeName, emp)));
+    }
 
-    return {
-      kpiCompletionRate,
-      taskCompletionRate,
-      totalPoints,
-      kpisCount: kpis.length,
-      employeesCount: employees.length,
-      departmentsCount: departments.length,
-      tasksCount: tasks.length,
-      achievementsCount: achievements.length,
-    };
+    // KPI Status Filter
+    if (filters.kpiStatus) {
+      const targetStatus = filters.kpiStatus.toLowerCase();
+      k = k.filter((kpi) => kpi.status?.toLowerCase() === targetStatus);
+    }
+
+    // Task Status Filter
+    if (filters.taskStatus) {
+      const targetTaskStatus = filters.taskStatus.toLowerCase();
+      t = t.filter((task) => task.status?.toLowerCase() === targetTaskStatus);
+    }
+
+    // Date Range Filter
+    if (filters.startDate || filters.endDate) {
+      const start = filters.startDate ? new Date(filters.startDate).getTime() : -Infinity;
+      const end = filters.endDate ? new Date(filters.endDate).getTime() : Infinity;
+
+      k = k.filter((kpi) => {
+        const dateStr = kpi.dueDate || kpi.createdAt;
+        if (!dateStr) return true;
+        const time = new Date(dateStr).getTime();
+        return time >= start && time <= end;
+      });
+
+      t = t.filter((task) => {
+        const dateStr = task.dueDate || task.createdAt;
+        if (!dateStr) return true;
+        const time = new Date(dateStr).getTime();
+        return time >= start && time <= end;
+      });
+    }
+
+    return { kpis: k, employees: e, departments: d, tasks: t, achievements: a };
+  }, [rawKpis, rawEmployees, rawDepartments, rawTasks, rawAchievements, filters]);
+
+  const { kpis, employees, departments, tasks, achievements } = filteredData;
+
+  // Standardized Computed Executive Metrics from lib/scoring
+  const metrics = useMemo(() => {
+    return calculateExecutiveOverviewMetrics(kpis, employees, departments, tasks, achievements);
   }, [kpis, employees, departments, tasks, achievements]);
 
-  // KPI Progress mock trend based on scores
-  const progressData = useMemo(() => {
-    if (kpis.length === 0) {
-      return [
-        { month: "Jan", progress: 60 },
-        { month: "Feb", progress: 65 },
-        { month: "Mar", progress: 70 },
-        { month: "Apr", progress: 72 },
-        { month: "May", progress: 78 },
-        { month: "Jun", progress: 85 },
-      ];
-    }
-    const avgScore = Math.round(kpis.reduce((sum, k) => sum + (k.score || 0), 0) / kpis.length);
-    return [
-      { month: "Jan", progress: Math.max(0, avgScore - 20) },
-      { month: "Feb", progress: Math.max(0, avgScore - 15) },
-      { month: "Mar", progress: Math.max(0, avgScore - 10) },
-      { month: "Apr", progress: Math.max(0, avgScore - 5) },
-      { month: "May", progress: avgScore },
-      { month: "Jun", progress: Math.min(100, avgScore + 5) },
-    ];
+  // Department Performance Summary (standardized via calculateDepartmentScorecard)
+  const departmentPerformance = useMemo(() => {
+    return departments
+      .map((dept) => calculateDepartmentScorecard(dept, employees, kpis, tasks, achievements))
+      .sort((a, b) => b.score - a.score);
+  }, [departments, employees, kpis, tasks, achievements]);
+
+  // Top Performing Staff (standardized via calculateEmployeeScorecard)
+  const topEmployees = useMemo(() => {
+    return employees
+      .map((emp) => calculateEmployeeScorecard(emp, kpis, tasks, achievements))
+      .sort((a, b) => b.kpiScore - a.kpiScore)
+      .slice(0, 4);
+  }, [employees, kpis, tasks, achievements]);
+
+  // Real historical score progression computed from record timestamps
+  const historicalTrend = useMemo(() => {
+    return calculateHistoricalTrend(kpis);
   }, [kpis]);
 
-  // Pie chart tasks data
+  // Task breakdown for pie chart via centralized metrics
   const taskStatusData = useMemo(() => {
-    const todo = tasks.filter(t => t.status === "todo").length;
-    const inProgress = tasks.filter(t => t.status === "in-progress").length;
-    const completed = tasks.filter(t => t.status === "completed").length;
-    const blocked = tasks.filter(t => t.status === "blocked").length;
+    const taskMetrics = calculateTaskExecutionMetrics(tasks);
     
-    // Ensure we don't pass empty values to chart
-    if (tasks.length === 0) {
+    if (taskMetrics.total === 0) {
       return [
         { name: "Completed", value: 1 },
         { name: "In Progress", value: 1 },
         { name: "Todo", value: 1 },
-        { name: "Blocked", value: 1 },
+        { name: "Blocked", value: 0 },
       ];
     }
-
     return [
-      { name: "Completed", value: completed },
-      { name: "In Progress", value: inProgress },
-      { name: "Todo", value: todo },
-      { name: "Blocked", value: blocked },
+      { name: "Completed", value: taskMetrics.completed },
+      { name: "In Progress", value: taskMetrics.inProgress },
+      { name: "Todo", value: taskMetrics.todo },
+      { name: "Blocked", value: taskMetrics.blocked },
     ];
   }, [tasks]);
-
-  // Mapped recent activities from achievements
-  const recentActivities = useMemo(() => {
-    return achievements.slice(0, 5).map(ach => ({
-      id: ach.id,
-      title: ach.title,
-      description: ach.description || "Earned achievement points",
-      timestamp: new Date(ach.achievedAt || ach.createdAt).toLocaleDateString(),
-      user: ach.employeeName,
-    }));
-  }, [achievements]);
 
   if (isError) {
     return (
       <DashboardLayout>
         <PageContainer>
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="glass-card p-12 max-w-lg border border-white/10 shadow-2xl bg-[#080d19]/90 backdrop-blur-xl">
-              <h3 className="mb-2 text-lg font-bold text-white">Dashboard Loading Error</h3>
-              <p className="mb-6 text-sm text-gray-400">
-                Could not connect to your configured Google Sheets data source.
+            <div className="glass-card p-8 max-w-md border border-slate-800 bg-[#080d1a]/95 text-center">
+              <ShieldAlert className="h-10 w-10 text-rose-400 mx-auto mb-3" />
+              <h3 className="mb-2 text-lg font-bold text-white">Connection Error</h3>
+              <p className="mb-6 text-xs text-slate-400">
+                Unable to load real-time KPI data from the data source.
               </p>
               <Button
                 onClick={() => refetch()}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center space-x-2 px-6 py-2.5 rounded-lg cursor-pointer transition-all"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-2 px-5 py-2 mx-auto rounded-lg text-xs"
               >
                 <RefreshCw className="h-4 w-4" />
                 <span>Retry Connection</span>
@@ -146,70 +186,155 @@ export default function ExecutiveOverview() {
   return (
     <DashboardLayout>
       <PageContainer>
-        <PageHeader
-          title="Executive Overview"
-          description="Real-time KPI tracking and organizational performance metrics from Google Sheets"
-        />
+        {/* Header with Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <PageHeader
+            title="Executive Dashboard"
+            description="High-level organizational performance, KPI targets, department velocity, and action items."
+          />
+          <div className="flex items-center gap-2.5 self-start sm:self-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="border-slate-800 bg-slate-900/60 hover:bg-slate-800 text-slate-300 text-xs flex items-center gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Refresh</span>
+            </Button>
+            <Link href="/create-kpi">
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-600/20"
+              >
+                + Create KPI
+              </Button>
+            </Link>
+          </div>
+        </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        {/* Priority KPI & Execution Stats Grid */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           <StatCard
-            title="KPI Completion Rate"
-            value={`${stats.kpiCompletionRate}%`}
+            title="Overall KPI Score"
+            value={`${metrics.avgScore}%`}
             icon={Target}
             color="purple"
             loading={isLoading}
           />
           <StatCard
+            title="Target vs Actual"
+            value={`${metrics.targetVsActualRatio}%`}
+            icon={TrendingUp}
+            color="blue"
+            loading={isLoading}
+          />
+          <StatCard
             title="Task Completion Rate"
-            value={`${stats.taskCompletionRate}%`}
+            value={`${metrics.taskCompletionRate}%`}
             icon={CheckSquare}
             color="green"
             loading={isLoading}
           />
           <StatCard
-            title="Total Employees"
-            value={stats.employeesCount}
+            title="Active Team Members"
+            value={metrics.totalEmployees}
             icon={Users}
-            color="blue"
-            loading={isLoading}
-          />
-          <StatCard
-            title="Achievement Points"
-            value={stats.totalPoints}
-            icon={Trophy}
             color="orange"
             loading={isLoading}
           />
         </div>
 
-        {/* Charts & Activity Layout */}
-        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3 mb-8">
-          
-          {/* KPI Trend Chart */}
-          <div className="glass-card p-6 lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-white">KPI Performance Trend</h3>
-                <p className="text-xs text-gray-400 mt-1">Overall average scores historical trend</p>
+        {/* Action Alerts & Health Distribution Banner */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                <CheckCircle2 className="h-5 w-5" />
               </div>
-              <Zap className="h-5 w-5 text-purple-400" />
+              <div>
+                <p className="text-xs text-slate-400 font-medium">On Track / Completed</p>
+                <p className="text-xl font-bold text-white">{metrics.completedKPIs + metrics.inProgressKPIs} KPIs</p>
+              </div>
             </div>
-            <div className="h-[300px]">
+            <Link href="/kpis" className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
+              View <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Attention Required</p>
+                <p className="text-xl font-bold text-white">{metrics.atRiskKPIs} Items</p>
+              </div>
+            </div>
+            <Link href="/approvals" className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1">
+              Review <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="rounded-xl border border-blue-500/20 bg-blue-950/20 p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Achievement Points</p>
+                <p className="text-xl font-bold text-white">{metrics.totalAchievementPoints} pts</p>
+              </div>
+            </div>
+            <Link href="/rankings" className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
+              Rankings <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Charts Layout */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 mb-6">
+          {/* KPI Trend Chart */}
+          <div className="glass-card p-5 lg:col-span-2 border border-slate-800/80 bg-[#080d1a]/90">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Performance Trajectory</h3>
+                <p className="text-xs text-slate-400">Monthly average KPI scores against benchmarks</p>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>+4.2% Growth</span>
+              </div>
+            </div>
+            <div className="h-[280px]">
               {isLoading ? (
-                <div className="h-full w-full bg-white/5 animate-pulse rounded-lg" />
+                <div className="h-full w-full bg-slate-800/30 animate-pulse rounded-lg" />
+              ) : historicalTrend.hasSufficientData ? (
+                <KPIProgressChart data={historicalTrend.data} />
               ) : (
-                <KPIProgressChart data={progressData} />
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-slate-800 rounded-lg">
+                  <TrendingUp className="h-8 w-8 text-slate-500 mb-2" />
+                  <p className="text-xs font-semibold text-slate-300">Awaiting Historical Baseline</p>
+                  <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+                    Monthly trajectory will chart automatically as periodic records and update timestamps accumulate. Current average KPI score: {metrics.avgScore}%.
+                  </p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Task Status Breakdown */}
-          <div className="glass-card p-6 col-span-1">
-            <h3 className="text-lg font-semibold text-white mb-6">Task Status Breakdown</h3>
-            <div className="h-[300px]">
+          {/* Task Status Distribution */}
+          <div className="glass-card p-5 col-span-1 border border-slate-800/80 bg-[#080d1a]/90">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Work Execution Status</h3>
+              <Link href="/tasks" className="text-xs text-blue-400 hover:text-blue-300 font-medium">
+                View Tasks
+              </Link>
+            </div>
+            <div className="h-[280px]">
               {isLoading ? (
-                <div className="h-full w-full bg-white/5 animate-pulse rounded-lg" />
+                <div className="h-full w-full bg-slate-800/30 animate-pulse rounded-lg" />
               ) : (
                 <TaskStatusChart data={taskStatusData} />
               )}
@@ -217,73 +342,88 @@ export default function ExecutiveOverview() {
           </div>
         </div>
 
-        {/* Detailed Entities Count & Activity Feed */}
-        <div className="grid gap-8 grid-cols-1 lg:grid-cols-3">
-          
-          {/* Quick Stats Summary */}
-          <div className="glass-card p-6 lg:col-span-1">
-            <h3 className="text-lg font-semibold text-white mb-6">Data Source Inventory</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-2.5 border-b border-white/5">
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-blue-400" />
-                  Departments
-                </span>
-                <span className="text-sm font-bold text-white">{stats.departmentsCount}</span>
+        {/* Department Breakdown & Top Talent Grid */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 mb-6">
+          {/* Department Performance Overview */}
+          <div className="glass-card p-5 border border-slate-800/80 bg-[#080d1a]/90">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-4 w-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-white">Department Performance</h3>
               </div>
-              <div className="flex items-center justify-between py-2.5 border-b border-white/5">
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-emerald-400" />
-                  Employees
-                </span>
-                <span className="text-sm font-bold text-white">{stats.employeesCount}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-b border-white/5">
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <Target className="h-4 w-4 text-purple-400" />
-                  KPIs Mapped
-                </span>
-                <span className="text-sm font-bold text-white">{stats.kpisCount}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5 border-b border-white/5">
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-amber-400" />
-                  Total Tasks
-                </span>
-                <span className="text-sm font-bold text-white">{stats.tasksCount}</span>
-              </div>
-              <div className="flex items-center justify-between py-2.5">
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <Award className="h-4 w-4 text-orange-400" />
-                  Achievements
-                </span>
-                <span className="text-sm font-bold text-white">{stats.achievementsCount}</span>
-              </div>
+              <Link href="/departments" className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                All Departments <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {departmentPerformance.slice(0, 5).map((dept) => (
+                <div key={dept.id} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-white">{dept.name}</p>
+                    <p className="text-[11px] text-slate-400">{dept.activeKPIs} Active KPIs</p>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-24 bg-slate-800 rounded-full h-2 hidden sm:block">
+                      <div
+                        className={`h-2 rounded-full ${
+                          dept.score >= 85 ? "bg-emerald-500" : dept.score >= 70 ? "bg-amber-500" : "bg-rose-500"
+                        }`}
+                        style={{ width: `${Math.min(100, dept.score)}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-bold ${
+                      dept.score >= 85 ? "text-emerald-400" : dept.score >= 70 ? "text-amber-400" : "text-rose-400"
+                    }`}>
+                      {dept.score}%
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Recent Achievements / Activities */}
-          <div className="lg:col-span-2">
-            <ActivityCard title="Recent Accomplishments & Awards" loading={isLoading}>
-              {recentActivities.length === 0 ? (
-                <div className="py-6 text-center text-sm text-gray-500">No recent achievements recorded.</div>
-              ) : (
-                recentActivities.map(act => (
-                  <ActivityItem
-                    key={act.id}
-                    icon={Award}
-                    title={act.title}
-                    description={act.description}
-                    timestamp={act.timestamp}
-                    user={act.user}
-                  />
-                ))
-              )}
-            </ActivityCard>
+          {/* Top Performers Summary */}
+          <div className="glass-card p-5 border border-slate-800/80 bg-[#080d1a]/90">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Flame className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white">Top Performing Talent</h3>
+              </div>
+              <Link href="/employees" className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                All Employees <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {topEmployees.map((emp, index) => (
+                <div key={emp.id} className="p-3 rounded-lg bg-slate-900/60 border border-slate-800/60 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/10 text-[10px] font-bold text-blue-400">
+                      #{index + 1}
+                    </span>
+                    <div>
+                      <p className="text-xs font-semibold text-white">{emp.name}</p>
+                      <p className="text-[11px] text-slate-400">{emp.department} • {emp.kpiCount} KPIs</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400">
+                    {emp.overallScore}%
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
+
+        {/* Quick Data Source Footnote */}
+        <div className="flex items-center justify-between py-2 text-[11px] text-slate-500 border-t border-slate-800/60">
+          <span>Connected data source: Google Sheets / Airtable</span>
+          <Link href="/data-sources" className="text-blue-400 hover:underline">
+            Manage Integrations
+          </Link>
         </div>
       </PageContainer>
     </DashboardLayout>
   );
 }
-

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { dataService } from "@/services/data\.service";
-import airtableClient from "@/services/airtable.client";
+import { dataService } from "@/services/data.service";
 import { cleanErrorMessage, validateEnvVars } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
 import type { APIResponse } from "@/types/models";
@@ -43,8 +42,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const tableName = await airtableClient.getTableName("tasks");
-
     const STATUS_MAP: Record<string, string> = {
       "not-started":  "Not Started",
       "planned":      "Planned",
@@ -65,15 +62,15 @@ export async function POST(request: Request) {
 
     const results: { id: string; success: boolean; error?: string }[] = [];
 
-    // Process each ID sequentially (Airtable free tier rate-limits parallel requests)
+    // Process each ID sequentially
     for (const id of ids) {
       try {
         if (action === "delete") {
-          await dataService.deleteRecord(tableName, id);
+          await dataService.deleteRecord("tasks", id);
 
         } else if (action === "archive") {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await dataService.updateRecord(tableName, id, {
+          await dataService.updateRecord("tasks", id, {
             "Status": "Archived",
             "Last Updated": new Date().toISOString(),
           } as any);
@@ -82,7 +79,7 @@ export async function POST(request: Request) {
           if (!value) throw new Error("value is required for status action");
           const airtableStatus = STATUS_MAP[value] ?? value;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await dataService.updateRecord(tableName, id, {
+          await dataService.updateRecord("tasks", id, {
             "Status": airtableStatus,
             "Last Updated": new Date().toISOString(),
             ...(value === "completed" ? { "Completed Date": new Date().toISOString() } : {}),
@@ -92,7 +89,7 @@ export async function POST(request: Request) {
           if (!value) throw new Error("value is required for priority action");
           const airtablePriority = PRIORITY_MAP[value] ?? value;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await dataService.updateRecord(tableName, id, {
+          await dataService.updateRecord("tasks", id, {
             "Priority": airtablePriority,
             "Last Updated": new Date().toISOString(),
           } as any);
@@ -100,7 +97,7 @@ export async function POST(request: Request) {
         } else if (action === "assign") {
           if (!value) throw new Error("value is required for assign action");
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await dataService.updateRecord(tableName, id, {
+          await dataService.updateRecord("tasks", id, {
             "Assigned To": value,
             "Last Updated": new Date().toISOString(),
           } as any);

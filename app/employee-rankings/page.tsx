@@ -30,21 +30,14 @@ import {
 import type { Employee, KPI, Achievement, Task } from "@/types/models";
 
 // Computed Employee Ranking Interface
-interface RankedEmployee extends Employee {
-  kpiScore: number;
-  weightedKpiScore: number;
-  valueScore: number;
-  achievementPoints: number;
-  taskCompletion: number;
-  consistency: number;
-  improvement: number;
-  overallScore: number;
+import { calculateEmployeeScorecard, matchesEmployee, type EmployeeScorecard } from "@/lib/scoring";
+
+interface RankedEmployee extends EmployeeScorecard {
   rank: number;
   previousRank: number;
+  consistency: number;
+  improvement: number;
   badge: { label: string; color: string };
-  trend: { type: "up" | "down" | "stable"; label: string; color: string };
-  achievementBadge: { label: string; color: string };
-  impactLevel: "High" | "Medium" | "Low";
 }
 
 function EmployeeRankingsContent() {
@@ -64,144 +57,44 @@ function EmployeeRankingsContent() {
   const [sortColumn, setSortColumn] = useState<string>("rank");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Compute stats and scores dynamically for all staff members
+  // Compute stats and scores dynamically for all staff members via centralized scoring engine
   const computedRankings = useMemo((): RankedEmployee[] => {
-    // 1. Map and compute scores
+    // 1. Calculate standardized scorecard per employee
     const list = employees.map((emp) => {
-      const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-      const empTasks = tasks.filter((t) => t.assignedTo?.toLowerCase() === emp.name.toLowerCase());
-      const empAchievements = achievements.filter((a) => a.employeeName?.toLowerCase() === emp.name.toLowerCase());
+      const scorecard = calculateEmployeeScorecard(emp, kpis, tasks, achievements);
+      const empKPIs = kpis.filter((k) => matchesEmployee(k.employeeId, emp));
 
-      // KPI Score
-      const kpiScore = empKPIs.length > 0
-        ? Math.round(empKPIs.reduce((sum, k) => sum + k.score, 0) / empKPIs.length)
-        : Math.round(emp.overallScore || 0);
-
-      // Weighted KPI Score
-      let weightedKpiScore = kpiScore;
-      if (empKPIs.length > 0) {
-        let totalWeight = 0, weightedSum = 0;
-        empKPIs.forEach((k) => {
-          let weight = 1.0;
-          const cat = k.category?.toLowerCase();
-          if (cat === "engineering" || cat === "sales") weight = 1.25;
-          else if (cat === "support" || cat === "hr") weight = 0.75;
-          weightedSum += k.score * weight;
-          totalWeight += weight;
-        });
-        weightedKpiScore = Math.round(weightedSum / totalWeight);
-      }
-
-      // Achievement points and Value Score
-      const achievementPoints = empAchievements.reduce((sum, a) => sum + a.points, 0);
-      const valueScore = Math.min(70 + Math.round(achievementPoints / 2.5), 100);
-
-      // Task Completion
-      const tasksCompleted = empTasks.filter((t) => t.status === "completed").length;
-      const taskCompletion = empTasks.length > 0 ? Math.round((tasksCompleted / empTasks.length) * 100) : 100;
-
-      // Consistency
+      // Consistency based on real KPI scores spread
       let consistency = 100;
       if (empKPIs.length > 1) {
-        const allScores = empKPIs.map((k) => k.score);
+        const allScores = empKPIs.map((k) => k.score || 0);
         consistency = 100 - (Math.max(...allScores) - Math.min(...allScores));
       }
 
-      // Improvement Score (determins name-based baseline curve)
-      const improvement = Math.min(65 + (emp.name.length % 30), 99);
-
-      // Overall performance score
-      const overallScore = Math.round((kpiScore + weightedKpiScore + valueScore) / 3);
-
-      // Achievement Badge
-      let achievementBadgeLabel = "Rookie";
-      let achievementBadgeColor = "text-blue-400 border-blue-500/20 bg-blue-500/10";
-      if (achievementPoints >= 150) {
-        achievementBadgeLabel = "Gold";
-        achievementBadgeColor = "text-yellow-400 border-yellow-500/20 bg-yellow-500/10 font-bold";
-      } else if (achievementPoints >= 100) {
-        achievementBadgeLabel = "Silver";
-        achievementBadgeColor = "text-gray-300 border-gray-400/20 bg-gray-400/10 font-bold";
-      } else if (achievementPoints >= 50) {
-        achievementBadgeLabel = "Bronze";
-        achievementBadgeColor = "text-amber-600 border-amber-700/20 bg-amber-700/10 font-bold";
-      } else if (achievementPoints === 0) {
-        achievementBadgeLabel = "None";
-        achievementBadgeColor = "text-gray-500 border-white/5 bg-white/5";
-      }
-
-      // Impact Level
-      let impactLevel: "High" | "Medium" | "Low" = "Low";
-      if (achievementPoints >= 100) {
-        impactLevel = "High";
-      } else if (achievementPoints >= 50) {
-        impactLevel = "Medium";
-      }
+      // Legitimate KPI completion percentage
+      const improvement = scorecard.kpiCount > 0 
+        ? Math.round((scorecard.completedKpiCount / scorecard.kpiCount) * 100)
+        : scorecard.kpiScore;
 
       return {
-        ...emp,
-        kpiScore,
-        weightedKpiScore,
-        valueScore,
-        achievementPoints,
-        taskCompletion,
-        consistency,
-        improvement,
-        overallScore,
+        ...scorecard,
         rank: 1,
         previousRank: 1,
-        badge: { label: "Developing", color: "text-amber-400 border-amber-500/20 bg-amber-500/10" },
-        trend: { type: "stable" as const, label: "Stable", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
-        achievementBadge: { label: achievementBadgeLabel, color: achievementBadgeColor },
-        impactLevel,
+        consistency,
+        improvement,
+        badge: scorecard.performanceBadge,
       };
     });
 
-    // 2. Sort by overallScore descending to assign ranks
+    // 2. Sort by overallScore descending to assign legitimate ranks
     const sortedList = [...list].sort((a, b) => b.overallScore - a.overallScore);
 
     return sortedList.map((emp, index) => {
       const rank = index + 1;
-      const offset = emp.name.length % 3 === 0 ? 1 : emp.name.length % 3 === 1 ? -1 : 0;
-      const previousRank = Math.max(1, Math.min(rank + offset, sortedList.length));
-
-      // Performance Badge assignment
-      let badgeLabel = "Developing";
-      let badgeColor = "text-amber-400 border-amber-500/20 bg-amber-500/10";
-      if (emp.overallScore >= 90) {
-        badgeLabel = "Elite Performer";
-        badgeColor = "text-emerald-400 border-emerald-500/20 bg-emerald-500/10 font-extrabold";
-      } else if (emp.overallScore >= 80) {
-        badgeLabel = "High Achiever";
-        badgeColor = "text-blue-400 border-blue-500/20 bg-blue-500/10 font-bold";
-      } else if (emp.overallScore >= 70) {
-        badgeLabel = "Solid Contributor";
-        badgeColor = "text-purple-400 border-purple-500/20 bg-purple-500/10 font-medium";
-      } else if (emp.overallScore < 50) {
-        badgeLabel = "Under Review";
-        badgeColor = "text-red-400 border-red-500/20 bg-red-500/10";
-      }
-
-      // Trend assignment
-      let trendType: "up" | "down" | "stable" = "stable";
-      let trendLabel = "Stable";
-      let trendColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-      if (previousRank > rank) {
-        trendType = "up";
-        trendLabel = "Up";
-        trendColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-      } else if (previousRank < rank) {
-        trendType = "down";
-        trendLabel = "Down";
-        trendColor = "text-red-400 bg-red-500/10 border-red-500/20";
-      }
-
       return {
         ...emp,
         rank,
-        previousRank,
-        badge: { label: badgeLabel, color: badgeColor },
-        trend: { type: trendType, label: trendLabel, color: trendColor },
+        previousRank: rank,
       };
     });
   }, [employees, kpis, achievements, tasks]);

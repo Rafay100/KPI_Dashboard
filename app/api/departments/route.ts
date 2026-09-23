@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { dataService } from "@/services/data\.service";
-import airtableClient from "@/services/airtable.client";
+import { dataService } from "@/services/data.service";
 import { DepartmentSchema } from "@/schemas/validation";
 import { validateEnvVars, cleanErrorMessage } from "@/utils/helpers";
 import { serverCache, CACHE_KEYS } from "@/lib/cache";
@@ -108,13 +107,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const base = airtableClient.getBase();
-    const tableName = await airtableClient.getTableName("departments");
-
-    // Fetch existing to check for duplicate names (case-insensitive)
-    const existingRecords = await base(tableName).select().all();
-    const isDuplicate = existingRecords.some((record) => {
-      const name = String(record.fields["Department Name"] || "").toLowerCase().trim();
+    // Fetch existing departments via dataService to check for duplicate names
+    const existingDepartments = await dataService.getDepartments();
+    const isDuplicate = existingDepartments.some((record) => {
+      const name = String(record.departmentName || "").toLowerCase().trim();
       return name === String(departmentName).toLowerCase().trim();
     });
 
@@ -128,16 +124,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create the record in Airtable
+    // Create the record via dataService / active adapter
     const fields: Record<string, any> = {
       "Department Name": departmentName.trim(),
     };
     if (description) fields["Description"] = description;
-    if (headOfDepartment) fields["Manager"] = headOfDepartment; // Field is "Manager" in Airtable schema for Departments
+    if (headOfDepartment) fields["Manager"] = headOfDepartment; // Field is "Manager" in schema for Departments
 
     // Add ID field (e.g. DEPT008)
-    const maxId = existingRecords.reduce((max, rec) => {
-      const idStr = String(rec.fields["ID"] || "");
+    const maxId = existingDepartments.reduce((max, rec) => {
+      const idStr = String(rec.id || "");
       const match = idStr.match(/\d+/);
       if (match) {
         const val = parseInt(match[0], 10);
@@ -148,7 +144,7 @@ export async function POST(request: Request) {
     const newId = `DEPT${String(maxId + 1).padStart(3, "0")}`;
     fields["ID"] = newId;
 
-    const newRecord = await base(tableName).create(fields);
+    const recordId = await dataService.createRecord("departments", fields);
 
     // Invalidate cache
     serverCache.invalidate(CACHE_KEYS.DEPARTMENTS);
@@ -157,7 +153,7 @@ export async function POST(request: Request) {
       {
         success: true,
         data: {
-          id: newRecord.id,
+          id: recordId,
           departmentName: fields["Department Name"],
           description: fields["Description"] || "",
           headOfDepartment: fields["Manager"] || "",

@@ -1,5 +1,3 @@
-import airtableClient from "@/services/airtable.client";
-import type { FieldSet } from "airtable";
 import type {
   KPI,
   Employee,
@@ -14,6 +12,7 @@ import {
   mapTaskFromAirtable,
   mapAchievementFromAirtable,
 } from "@/utils/mappers";
+import { AdapterFactory } from "@/adapters";
 
 const localFallbackData = {
   kpis: [] as KPI[],
@@ -50,52 +49,6 @@ function createLocalKPIRecord(fields: Record<string, unknown>): KPI {
     createdAt: new Date().toISOString(),
   };
 }
-
-function sanitizeFieldsForAirtable(fields: Record<string, unknown>): Record<string, unknown> {
-  const allowedFields = new Set([
-    "Name",
-    "KPI Name",
-    "Description",
-    "Department ID",
-    "DepartmentId",
-    "departmentId",
-    "Employee ID",
-    "EmployeeId",
-    "employeeId",
-    "TargetValue",
-    "targetValue",
-    "ActualValue",
-    "actualValue",
-    "Status",
-    "status",
-    "DueDate",
-    "dueDate",
-    "LastUpdated",
-    "lastUpdated",
-    "ID",
-    "id",
-    "Category",
-    "category",
-    "Team",
-    "team",
-    "Owner",
-    "owner",
-    "Frequency",
-    "frequency",
-    "Unit",
-    "unit",
-    "Target Value",
-    "target",
-    "Actual Value",
-    "actual"
-  ]);
-
-  return Object.fromEntries(
-    Object.entries(fields).filter(([key]) => allowedFields.has(key))
-  );
-}
-
-import { AdapterFactory } from "@/adapters";
 
 /**
  * Data Service
@@ -294,57 +247,33 @@ export class DataService {
   /**
    * Create a new record (generic)
    */
-  async createRecord<T extends FieldSet>(
+  async createRecord(
     tableName: string,
-    fields: Partial<T>
+    fields: Record<string, unknown>
   ): Promise<string> {
-    const normalizedFields = sanitizeFieldsForAirtable(fields as Record<string, unknown>);
     let recordId = `local-${Date.now()}`;
 
     try {
-      const base = airtableClient.getBase();
-      const resolvedTableName =
-        tableName.toLowerCase() === "kpis"
-          ? await airtableClient.getTableName("kpis")
-          : tableName;
-
-      const record = await base(resolvedTableName).create(normalizedFields as T);
-      recordId = record.id;
+      const adapter = await this.getAdapter();
+      recordId = await adapter.createRecord(tableName, fields);
+      try {
+        await adapter.disconnect();
+      } catch {}
     } catch (error) {
-      console.error(`Error creating record in ${tableName}:`, error);
-
-      if (tableName.toLowerCase() === "kpis") {
-        const isUnknownFieldError =
-          error instanceof Error &&
-          /unknown field name|invalid field|not supported/i.test(error.message);
-
-        if (isUnknownFieldError && Object.keys(normalizedFields).length > 1) {
-          const retryFields = Object.fromEntries(
-            Object.entries(normalizedFields).filter(([key]) => !["Description", "description"].includes(key))
-          );
-
-          try {
-            const base = airtableClient.getBase();
-            const resolvedTableName = await airtableClient.getTableName("kpis");
-            const record = await base(resolvedTableName).create(retryFields as T);
-            recordId = record.id;
-          } catch (retryError) {
-            console.error("Retry create after field sanitization failed:", retryError);
-          }
-        }
-      }
+      console.error(`Error creating record in ${tableName} via adapter:`, error);
+      throw error;
     }
 
     // Always update local fallback data
     const lowerTable = tableName.toLowerCase();
     if (lowerTable === "kpis") {
-      const localKPI = createLocalKPIRecord(fields as Record<string, unknown>);
+      const localKPI = createLocalKPIRecord(fields);
       localKPI.id = recordId;
       localFallbackData.kpis = [localKPI, ...localFallbackData.kpis];
     } else if (lowerTable === "tasks") {
       const localTask: Task = {
         id: recordId,
-        taskName: String(fields.Title || fields.title || fields.Name || "New Task"),
+        taskName: String(fields.Title || fields.title || fields.Name || fields.TaskName || fields.taskName || "New Task"),
         description: String(fields.Description || fields.description || ""),
         status: String(fields.Status || fields.status || "todo").toLowerCase() as Task["status"],
         priority: String(fields.Priority || fields.priority || "medium").toLowerCase() as Task["priority"],
@@ -376,7 +305,7 @@ export class DataService {
     } else if (lowerTable === "departments") {
       const localDept: Department = {
         id: recordId,
-        departmentName: String(fields.Name || fields.name || fields.DepartmentName || "New Department"),
+        departmentName: String(fields.Name || fields.name || fields.DepartmentName || fields["Department Name"] || "New Department"),
         description: String(fields.Description || fields.description || ""),
         averageScore: 0,
         employeeCount: 0,
@@ -409,20 +338,20 @@ export class DataService {
   /**
    * Update a record (generic)
    */
-  async updateRecord<T extends FieldSet>(
+  async updateRecord(
     tableName: string,
     id: string,
-    fields: Partial<T>
+    fields: Record<string, unknown>
   ): Promise<boolean> {
     try {
-      const base = airtableClient.getBase();
-      const resolvedTableName =
-        tableName.toLowerCase() === "kpis"
-          ? await airtableClient.getTableName("kpis")
-          : tableName;
-      await base(resolvedTableName).update(id, fields as T);
+      const adapter = await this.getAdapter();
+      await adapter.updateRecord(tableName, id, fields);
+      try {
+        await adapter.disconnect();
+      } catch {}
     } catch (error) {
-      console.error(`Error updating record ${id} in ${tableName}:`, error);
+      console.error(`Error updating record ${id} in ${tableName} via adapter:`, error);
+      throw error;
     }
 
     // Always update local fallback data
@@ -437,8 +366,8 @@ export class DataService {
             ...k,
             kpiName,
             description: fields.Description !== undefined ? String(fields.Description) : k.description,
-            departmentId: fields.DepartmentId !== undefined ? String(fields.DepartmentId) : k.departmentId,
-            employeeId: fields.EmployeeId !== undefined ? String(fields.EmployeeId) : k.employeeId,
+            departmentId: fields.DepartmentId !== undefined || fields["Department ID"] !== undefined ? String(fields.DepartmentId || fields["Department ID"]) : k.departmentId,
+            employeeId: fields.EmployeeId !== undefined || fields["Employee ID"] !== undefined ? String(fields.EmployeeId || fields["Employee ID"]) : k.employeeId,
             targetValue: fields.TargetValue !== undefined ? Number(fields.TargetValue) : k.targetValue,
             actualValue: fields.ActualValue !== undefined ? Number(fields.ActualValue) : k.actualValue,
             status: fields.Status !== undefined ? String(fields.Status) as KPI["status"] : k.status,
@@ -458,14 +387,14 @@ export class DataService {
    */
   async deleteRecord(tableName: string, id: string): Promise<boolean> {
     try {
-      const base = airtableClient.getBase();
-      const resolvedTableName =
-        tableName.toLowerCase() === "kpis"
-          ? await airtableClient.getTableName("kpis")
-          : tableName;
-      await base(resolvedTableName).destroy(id);
+      const adapter = await this.getAdapter();
+      await adapter.deleteRecord(tableName, id);
+      try {
+        await adapter.disconnect();
+      } catch {}
     } catch (error) {
-      console.error(`Error deleting record ${id} from ${tableName}:`, error);
+      console.error(`Error deleting record ${id} from ${tableName} via adapter:`, error);
+      throw error;
     }
 
     // Always delete from local fallback data so the UI updates correctly

@@ -24,7 +24,8 @@ import {
   RefreshCw,
   Award
 } from "lucide-react";
-import type { Employee, KPI, Achievement } from "@/types/models";
+import type { Employee } from "@/types/models";
+import { calculateEmployeeScorecard } from "@/lib/scoring";
 
 // Type definition for computed employee details
 interface ComputedEmployee extends Employee {
@@ -86,93 +87,20 @@ function EmployeesContent() {
     router.replace(`/employees?${params.toString()}`);
   };
 
-  // Perform Calculations & Mapping per Employee record
+  // Perform Calculations & Mapping per Employee record via centralized scoring engine
   const computedEmployees = useMemo((): ComputedEmployee[] => {
     return employees.map((emp) => {
-      // 1. Filter KPIs assigned to this employee (case insensitive name match)
-      const empKPIs = kpis.filter(
-        (k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase()
-      );
-
-      // 2. KPI Score (Average of all assigned KPI scores, fallback to Airtable record overallScore)
-      const kpiScore =
-        empKPIs.length > 0
-          ? Math.round(empKPIs.reduce((sum, k) => sum + k.score, 0) / empKPIs.length)
-          : Math.round(emp.overallScore || 0);
-
-      // 3. Weighted KPI Score (Engineering/Sales = 1.25, Support/HR = 0.75, default 1.0)
-      let weightedKpiScore = kpiScore;
-      if (empKPIs.length > 0) {
-        let totalWeight = 0;
-        let weightedSum = 0;
-        empKPIs.forEach((k) => {
-          let weight = 1.0;
-          const cat = k.category?.toLowerCase();
-          if (cat === "engineering" || cat === "sales") {
-            weight = 1.25;
-          } else if (cat === "support" || cat === "hr") {
-            weight = 0.75;
-          }
-          weightedSum += k.score * weight;
-          totalWeight += weight;
-        });
-        weightedKpiScore = Math.round(weightedSum / totalWeight);
-      }
-
-      // 4. Value Score (derived from achievements points sum, scaled to 70-100 range)
-      const empAchievements = achievements.filter(
-        (a) => a.employeeName?.toLowerCase() === emp.name.toLowerCase()
-      );
-      const pointsSum = empAchievements.reduce((sum, a) => sum + a.points, 0);
-      const valueScore = Math.min(70 + Math.round(pointsSum / 2.5), 100);
-
-      // 5. Overall Performance Score (Average of KPI, Weighted KPI, and Value Score)
-      const overallPerformanceScore = Math.round((kpiScore + weightedKpiScore + valueScore) / 3);
-
-      // 6. Performance Badge definition
-      let badgeLabel = "Developing";
-      let badgeColor = "text-amber-400 border-amber-500/20 bg-amber-500/10";
-
-      if (overallPerformanceScore >= 90) {
-        badgeLabel = "Elite Performer";
-        badgeColor = "text-emerald-400 border-emerald-500/20 bg-emerald-500/10 shadow-sm shadow-emerald-500/5 font-extrabold";
-      } else if (overallPerformanceScore >= 80) {
-        badgeLabel = "High Achiever";
-        badgeColor = "text-blue-400 border-blue-500/20 bg-blue-500/10 font-bold";
-      } else if (overallPerformanceScore >= 70) {
-        badgeLabel = "Solid Contributor";
-        badgeColor = "text-purple-400 border-purple-500/20 bg-purple-500/10 font-medium";
-      } else if (overallPerformanceScore < 50) {
-        badgeLabel = "Under Review";
-        badgeColor = "text-red-400 border-red-500/20 bg-red-500/10";
-      }
-
-      // 7. Trend Definition
-      let trendType: "up" | "down" | "stable" = "stable";
-      let trendLabel = "Stable";
-      let trendColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-
-      if (overallPerformanceScore >= 83) {
-        trendType = "up";
-        trendLabel = "Up";
-        trendColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-      } else if (overallPerformanceScore < 72) {
-        trendType = "down";
-        trendLabel = "Down";
-        trendColor = "text-red-400 bg-red-500/10 border-red-500/20";
-      }
-
-      // 8. Status Definition (deterministic for variety: employees with odd ID length are on leave, else active)
-      const status: "Active" | "On Leave" = emp.name.length % 7 === 0 ? "On Leave" : "Active";
+      const scorecard = calculateEmployeeScorecard(emp, kpis, [], achievements);
+      const status: "Active" | "On Leave" = "Active";
 
       return {
         ...emp,
-        kpiScore,
-        weightedKpiScore,
-        valueScore,
-        overallPerformanceScore,
-        performanceBadge: { label: badgeLabel, color: badgeColor },
-        trend: { type: trendType, label: trendLabel, color: trendColor },
+        kpiScore: scorecard.kpiScore,
+        weightedKpiScore: scorecard.weightedKpiScore,
+        valueScore: scorecard.valueScore,
+        overallPerformanceScore: scorecard.overallScore,
+        performanceBadge: scorecard.performanceBadge,
+        trend: scorecard.trend,
         status,
       };
     });
@@ -604,7 +532,7 @@ function EmployeesContent() {
                                 />
                               ) : null}
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-400 font-extrabold text-xs uppercase flex-shrink-0">
-                                {emp.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                                {emp.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                               </div>
                               <div>
                                 <span className="font-semibold text-white block leading-tight">{emp.name}</span>

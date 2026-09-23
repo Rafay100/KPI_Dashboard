@@ -4,7 +4,7 @@ import { useState, useMemo, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { useDepartments, useEmployees, useKPIs, useAchievements } from "@/hooks/useData";
+import { useDepartments, useEmployees, useKPIs, useAchievements, useTasks } from "@/hooks/useData";
 import { Button } from "@/components/ui/Button";
 import {
   Trophy,
@@ -27,6 +27,7 @@ import {
   TrendingUp as RisingIcon
 } from "lucide-react";
 import type { Department, Employee, KPI, Achievement } from "@/types/models";
+import { calculateDepartmentScorecard, type DepartmentScorecard } from "@/lib/scoring";
 
 // Leaderboard row model interface
 interface LeaderboardItem extends Department {
@@ -38,8 +39,8 @@ interface LeaderboardItem extends Department {
   averagePerformanceScore: number;
   achievementPoints: number;
   overallDepartmentScore: number;
-  improvementRate: number;
   monthlyGrowth: number;
+  improvementRate: number;
   rank: number;
   previousRank: number;
   badge: { label: string; color: string };
@@ -54,6 +55,7 @@ function DepartmentLeaderboardContent() {
   const { data: employees = [], isLoading: isEmployeesLoading } = useEmployees();
   const { data: kpis = [], isLoading: isKPIsLoading } = useKPIs();
   const { data: achievements = [], isLoading: isAchievementsLoading } = useAchievements();
+  const { data: tasks = [] } = useTasks();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sortColumn, setSortColumn] = useState<string>("rank");
@@ -65,80 +67,47 @@ function DepartmentLeaderboardContent() {
     if (departments.length > 0) {
       setLastSynced(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }
-  }, [departments, employees, kpis, achievements]);
+  }, [departments, employees, kpis, achievements, tasks]);
 
-  // Compute leaderboard values for all departments
+  // Compute leaderboard values for all departments via centralized scoring
   const leaderboardItems = useMemo((): LeaderboardItem[] => {
     const list = departments.map((dept) => {
+      const scorecard = calculateDepartmentScorecard(dept, employees, kpis, tasks, achievements);
+
       const deptEmployees = employees.filter(
-        (e) => 
+        (e) =>
           e.department?.toLowerCase() === dept.departmentName?.toLowerCase() ||
           e.department?.toLowerCase() === dept.id?.toLowerCase() ||
           e.departmentId?.toLowerCase() === dept.id?.toLowerCase()
       );
-      
-      const deptKPIs = kpis.filter(
-        (k) => 
-          k.departmentId?.toLowerCase() === dept.departmentName?.toLowerCase() ||
-          k.departmentId?.toLowerCase() === dept.id?.toLowerCase()
-      );
-
-      // Teams count
       const teams = deptEmployees.map((e) => e.team).filter(Boolean);
       const teamsCount = Array.from(new Set(teams)).length;
 
-      // Active KPIs
-      const activeKPIsCount = deptKPIs.length;
-
-      // Completion Rate
-      const completed = deptKPIs.filter((k) => k.status === "completed").length;
-      const kpiCompletionRate = activeKPIsCount > 0 ? Math.round((completed / activeKPIsCount) * 100) : 100;
-
-      // Average KPI Score
-      const averageKpiScore = activeKPIsCount > 0
-        ? Math.round(deptKPIs.reduce((sum, k) => sum + k.score, 0) / activeKPIsCount)
-        : Math.round(dept.averageScore || 0);
-
-      // Average Performance Score
-      const averagePerformanceScore = deptEmployees.length > 0
-        ? Math.round(deptEmployees.reduce((sum, emp) => {
-            const empKPIs = kpis.filter((k) => k.employeeId?.toLowerCase() === emp.name.toLowerCase());
-            const kScore = empKPIs.length > 0 ? Math.round(empKPIs.reduce((s, k) => s + k.score, 0) / empKPIs.length) : emp.overallScore;
-            return sum + kScore;
-          }, 0) / deptEmployees.length)
-        : Math.round(dept.averageScore || 0);
-
-      // Achievement Points
-      const deptEmpNames = deptEmployees.map((e) => e.name.toLowerCase());
-      const deptAchievements = achievements.filter((a) => deptEmpNames.includes(a.employeeName?.toLowerCase()));
-      const achievementPoints = deptAchievements.reduce((sum, a) => sum + a.points, 0);
-
-      // Overall Score
-      const valueScore = Math.min(70 + Math.round(achievementPoints / 5), 100);
-      const overallDepartmentScore = Math.round((averageKpiScore + averagePerformanceScore + valueScore) / 3);
-
-      // Growth indexes
-      const monthlyGrowth = Math.min(10 + (dept.departmentName.length % 5) * 4, 30);
-      const improvementRate = 60 + (dept.departmentName.length % 20) + (dept.id.charCodeAt(0) % 15);
-
-      const manager = dept.headOfDepartment || "—";
-
       return {
         ...dept,
-        manager,
+        manager: scorecard.head,
         teamsCount,
-        activeKPIsCount,
-        kpiCompletionRate,
-        averageKpiScore,
-        averagePerformanceScore,
-        achievementPoints,
-        overallDepartmentScore,
-        improvementRate,
-        monthlyGrowth,
+        activeKPIsCount: scorecard.activeKPIs,
+        kpiCompletionRate: scorecard.kpiCompletionRate,
+        averageKpiScore: scorecard.score,
+        averagePerformanceScore: scorecard.score,
+        achievementPoints: scorecard.achievementPoints,
+        overallDepartmentScore: scorecard.score,
+        monthlyGrowth: Math.round(scorecard.score * 0.05),
+        improvementRate: scorecard.kpiCompletionRate,
         rank: 1,
         previousRank: 1,
         badge: { label: "Standard Tier", color: "text-gray-400 border-white/10 bg-white/5" },
-        trend: { type: "stable" as const, label: "Stable", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+        trend: {
+          type: scorecard.trend,
+          label: scorecard.trend === "up" ? "Up" : scorecard.trend === "down" ? "Down" : "Stable",
+          color:
+            scorecard.trend === "up"
+              ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+              : scorecard.trend === "down"
+              ? "text-red-400 bg-rose-500/10 border-rose-500/20"
+              : "text-amber-400 bg-amber-500/10 border-amber-500/20",
+        },
       };
     });
 
@@ -147,8 +116,6 @@ function DepartmentLeaderboardContent() {
 
     return sortedList.map((dept, index) => {
       const rank = index + 1;
-      const offset = dept.departmentName.length % 3 === 0 ? 1 : dept.departmentName.length % 3 === 1 ? -1 : 0;
-      const previousRank = Math.max(1, Math.min(rank + offset, sortedList.length));
 
       // Leaderboard Badge Assignment
       let badgeLabel = "Standard Tier";
@@ -167,29 +134,14 @@ function DepartmentLeaderboardContent() {
         badgeColor = "text-blue-400 border-blue-500/20 bg-blue-500/10 font-semibold";
       }
 
-      // Trend mapping
-      let trendType: "up" | "down" | "stable" = "stable";
-      let trendLabel = "Stable";
-      let trendColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
-      if (previousRank > rank) {
-        trendType = "up";
-        trendLabel = "Up";
-        trendColor = "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
-      } else if (previousRank < rank) {
-        trendType = "down";
-        trendLabel = "Down";
-        trendColor = "text-red-400 bg-red-500/10 border-red-500/20";
-      }
-
       return {
         ...dept,
         rank,
-        previousRank,
+        previousRank: rank,
         badge: { label: badgeLabel, color: badgeColor },
-        trend: { type: trendType, label: trendLabel, color: trendColor },
       };
     });
-  }, [departments, employees, kpis, achievements]);
+  }, [departments, employees, kpis, achievements, tasks]);
 
   // Highlight Categories
   const highlights = useMemo(() => {
