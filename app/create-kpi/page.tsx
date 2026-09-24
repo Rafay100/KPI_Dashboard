@@ -172,15 +172,15 @@ export default function CreateKPI() {
 
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || "Failed to create KPI in Airtable");
+        throw new Error(result.error || result.message || "Failed to create KPI");
       }
 
-      setMessage("🎉 Success! KPI created and synced to Airtable.");
+      setMessage("🎉 Success! KPI created and synced successfully.");
       
       // Invalidate cache immediately to refresh the table
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       
-      setTimeout(() => router.push("/tracking-boards"), 1200);
+      setTimeout(() => router.push("/kpi-monitoring"), 1200);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected connection error while creating KPI");
     } finally {

@@ -65,7 +65,7 @@ export class GoogleSheetsAdapter extends BaseAdapter {
       this.authClient = new google.auth.JWT({
         email,
         key: privateKey,
-        scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
       });
 
       // Verify connection by testing access
@@ -98,6 +98,7 @@ export class GoogleSheetsAdapter extends BaseAdapter {
       if (!this.authClient) {
         return false;
       }
+
       const sheets = google.sheets({ version: "v4", auth: this.authClient });
       const sheetId = process.env.GOOGLE_SHEET_ID;
 
@@ -349,11 +350,152 @@ export class GoogleSheetsAdapter extends BaseAdapter {
 
   async createRecord(
     tableName: string,
-    _fields: Record<string, unknown>
+    fields: Record<string, unknown>
   ): Promise<string> {
-    const errorMsg = `Write operations are not supported by the Google Sheets adapter (table: ${tableName}).`;
-    logError(this.serviceName, errorMsg);
-    throw new Error(errorMsg);
+    try {
+      if (!this.isConnected || !this.authClient) {
+        await this.connect();
+      }
+
+      const sheets = google.sheets({ version: "v4", auth: this.authClient });
+      const sheetId = process.env.GOOGLE_SHEET_ID;
+
+      // Determine the canonical sheet tab name
+      const lowerTable = tableName.toLowerCase();
+      let tabName = "KPIs";
+      if (lowerTable.includes("kpi")) tabName = "KPIs";
+      else if (lowerTable.includes("emp")) tabName = "Employees";
+      else if (lowerTable.includes("dep")) tabName = "Departments";
+      else if (lowerTable.includes("task")) tabName = "Tasks";
+      else if (lowerTable.includes("achieve")) tabName = "Achievements";
+      else if (lowerTable.includes("team")) tabName = "Teams";
+      else if (lowerTable.includes("user")) tabName = "Users";
+
+      // Fetch headers and existing records to determine structure & unique ID
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: sheetId,
+        range: `${tabName}!A1:ZZ5000`,
+      });
+
+      const rows = response.data.values || [];
+      if (rows.length === 0) {
+        throw new Error(`Tab "${tabName}" has no header row.`);
+      }
+
+      const headers = rows[0].map((h) => String(h).trim());
+      const idColIdx = headers.findIndex((h) => h.toLowerCase() === "id");
+
+      let nextId = "";
+      if (fields.id || fields.ID || fields.Id) {
+        nextId = String(fields.id || fields.ID || fields.Id);
+      } else if (tabName === "KPIs") {
+        let maxNum = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const rowId = idColIdx >= 0 ? String(rows[i][idColIdx] || "") : "";
+          const match = rowId.match(/kpi_(\d+)/i);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        }
+        if (maxNum === 0) maxNum = rows.length;
+        nextId = `kpi_${String(maxNum + 1).padStart(4, "0")}`;
+      } else {
+        nextId = `row_${Date.now()}`;
+      }
+
+      const findVal = (candidates: string[]) => {
+        for (const c of candidates) {
+          if (c in fields && fields[c] !== undefined && fields[c] !== null && fields[c] !== "") {
+            return fields[c];
+          }
+        }
+        for (const key of Object.keys(fields)) {
+          const normKey = key.toLowerCase().replace(/[\s_-]/g, "");
+          for (const c of candidates) {
+            if (normKey === c.toLowerCase().replace(/[\s_-]/g, "")) {
+              if (fields[key] !== undefined && fields[key] !== null && fields[key] !== "") {
+                return fields[key];
+              }
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const rowValues = headers.map((header) => {
+        const norm = header.toLowerCase().replace(/[\s_-]/g, "");
+        if (norm === "id") return nextId;
+        if (norm === "kpicode") return findVal(["code", "ID", "kpi_code", "kpiCode", "idCode"]) || "";
+        if (norm === "name") return findVal(["kpiName", "Name", "name", "title", "Title"]) || "";
+        if (norm === "description") return findVal(["Description", "description", "notes"]) || "";
+        if (norm === "category") return findVal(["Category", "category"]) || "";
+        if (norm === "kpilevel") return findVal(["kpi_level", "kpiLevel"]) || "Employee KPI";
+        if (norm === "departmentid") return findVal(["DepartmentId", "departmentId", "department_id", "Department", "department"]) || "";
+        if (norm === "teamid") return findVal(["Team", "team", "team_id", "teamId"]) || "";
+        if (norm === "employeeid") return findVal(["EmployeeId", "employeeId", "employee_id", "assignedEmployee"]) || "";
+        if (norm === "owneremployeeid") return findVal(["Owner", "owner", "owner_employee_id", "ownerEmployeeId", "EmployeeId", "employee_id"]) || "";
+        if (norm === "targetvalue") {
+          const v = findVal(["TargetValue", "targetValue", "target_value", "Target"]);
+          return v !== undefined ? String(v) : "0";
+        }
+        if (norm === "actualvalue") {
+          const v = findVal(["ActualValue", "actualValue", "actual_value", "Actual"]);
+          return v !== undefined ? String(v) : "0";
+        }
+        if (norm === "minimumvalue") return findVal(["minimum_value", "minValue"]) || "0";
+        if (norm === "maximumvalue") return findVal(["maximum_value", "maxValue"]) || "0";
+        if (norm === "measurementunit") return findVal(["Unit", "unit", "measurement_unit", "measurementUnit"]) || "Percentage";
+        if (norm === "measurementtype") return findVal(["measurement_type", "measurementType"]) || "Numeric";
+        if (norm === "calculationdirection") return findVal(["calculation_direction"]) || "Higher is Better";
+        if (norm === "score") {
+          const target = Number(findVal(["TargetValue", "targetValue", "target_value"]) || 0);
+          const actual = Number(findVal(["ActualValue", "actualValue", "actual_value"]) || 0);
+          if (target > 0) {
+            return String(Math.min(Math.round((actual / target) * 100), 100));
+          }
+          return "0";
+        }
+        if (norm === "scorecap") return findVal(["score_cap"]) || "100";
+        if (norm === "frequency") return findVal(["Frequency", "frequency"]) || "Monthly";
+        if (norm === "startdate") return findVal(["start_date", "startDate"]) || new Date().toISOString().split("T")[0];
+        if (norm === "duedate") return findVal(["DueDate", "dueDate", "due_date"]) || "";
+        if (norm === "reviewdate") return findVal(["review_date"]) || "";
+        if (norm === "entrymethod") return findVal(["entry_method"]) || "Manual";
+        if (norm === "requiresmanagerapproval") return "FALSE";
+        if (norm === "weight") return findVal(["weight", "Weight"]) || "10";
+        if (norm === "criticalthreshold") return "50";
+        if (norm === "warningthreshold") return "75";
+        if (norm === "successthreshold") return "90";
+        if (norm === "stretchscore") return "110";
+        if (norm === "status") return findVal(["Status", "status"]) || "not-started";
+        if (norm === "approvalstatus") return findVal(["approval_status", "approvalStatus"]) || "Approved";
+        if (norm === "trend") return findVal(["trend"]) || "stable";
+        if (norm === "sourcesystem") return findVal(["source_system"]) || "dashboard";
+        if (norm === "externalid") return findVal(["external_id"]) || "";
+        if (norm === "notes") return findVal(["Notes", "notes"]) || "";
+        if (norm === "createdat") return new Date().toISOString();
+        if (norm === "updatedat") return new Date().toISOString();
+
+        const genericVal = findVal([header, norm]);
+        return genericVal !== undefined ? String(genericVal) : "";
+      });
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: sheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [rowValues],
+        },
+      });
+
+      logSuccess(this.serviceName, `Successfully created record ${nextId} in "${tabName}"`);
+      return nextId;
+    } catch (error) {
+      logError(this.serviceName, `Failed to create record in ${tableName}`, error);
+      throw error;
+    }
   }
 
   async updateRecord(
@@ -379,7 +521,7 @@ export class GoogleSheetsAdapter extends BaseAdapter {
       supportsBulkOperations: true,
       supportsSearch: false,
       supportsFiltering: true,
-      supportsWrites: false,
+      supportsWrites: true,
       maxRecordsPerRequest: 1000,
     };
   }

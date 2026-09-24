@@ -76,7 +76,10 @@ export function validateEnvVars(): {
   isValid: boolean;
   missing: string[];
 } {
-  const required = ["AIRTABLE_API_KEY", "AIRTABLE_BASE_ID"];
+  const isGoogleSheets = process.env.DATA_SOURCE?.toLowerCase() === "google-sheets";
+  const required = isGoogleSheets
+    ? ["GOOGLE_SHEET_ID", "GOOGLE_SERVICE_ACCOUNT_EMAIL", "GOOGLE_PRIVATE_KEY"]
+    : ["AIRTABLE_API_KEY", "AIRTABLE_BASE_ID"];
   const missing: string[] = [];
 
   for (const varName of required) {
