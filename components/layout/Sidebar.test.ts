@@ -13,11 +13,19 @@ describe("Client Sidebar Navigation Structure", () => {
     ]);
   });
 
-  it("should not contain Approvals in the navigation items", () => {
+  it("should not contain removed items (Kanban, Calendar, Import / Export, Settings, Approvals) in navigation", () => {
     const allLabels = MENU_ITEMS.map((item) => item.label.toLowerCase());
     const allHrefs = MENU_ITEMS.map((item) => item.href.toLowerCase());
     expect(allLabels).not.toContain("approvals");
     expect(allHrefs).not.toContain("/approvals");
+    expect(allLabels).not.toContain("kanban");
+    expect(allHrefs).not.toContain("/kanban");
+    expect(allLabels).not.toContain("calendar");
+    expect(allHrefs).not.toContain("/task-calendar");
+    expect(allLabels).not.toContain("import / export");
+    expect(allHrefs).not.toContain("/import-mapping");
+    expect(allLabels).not.toContain("settings");
+    expect(allHrefs).not.toContain("/settings");
   });
 
   it("should have KPI Monitoring as the main KPI navigation item under PERFORMANCE", () => {
@@ -35,7 +43,7 @@ describe("Client Sidebar Navigation Structure", () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
-  it("should match the exact recommended client sidebar specification", () => {
+  it("should match the exact clean client sidebar specification", () => {
     const expected = [
       {
         title: "OVERVIEW",
@@ -54,8 +62,6 @@ describe("Client Sidebar Navigation Structure", () => {
         title: "WORK MANAGEMENT",
         items: [
           { label: "Tasks", href: "/tasks" },
-          { label: "Kanban", href: "/kanban" },
-          { label: "Calendar", href: "/task-calendar" },
         ],
       },
       {
@@ -71,8 +77,6 @@ describe("Client Sidebar Navigation Structure", () => {
         title: "ADMINISTRATION",
         items: [
           { label: "Data Sources", href: "/data-sources" },
-          { label: "Import / Export", href: "/import-mapping" },
-          { label: "Settings", href: "/settings" },
         ],
       },
     ];

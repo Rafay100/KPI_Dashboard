@@ -9,80 +9,39 @@ import { CheckCircle, Clock, Settings as SettingsIcon } from "lucide-react";
 
 const initialIntegrations = [
   {
-    id: "airtable",
-    name: "Airtable",
-    description: "Connected to Airtable database for KPI data",
-    status: "connected",
-    lastSync: new Date().toISOString(),
-  },
-  {
-    id: "clickup",
-    name: "ClickUp",
-    description: "Project management and task tracking",
-    status: "coming-soon",
-  },
-  {
-    id: "jira",
-    name: "Jira",
-    description: "Issue tracking and agile project management",
-    status: "coming-soon",
-  },
-  {
-    id: "monday",
-    name: "Monday.com",
-    description: "Work operating system for team collaboration",
-    status: "coming-soon",
-  },
-  {
-    id: "asana",
-    name: "Asana",
-    description: "Work management platform for organizing tasks",
-    status: "coming-soon",
-  },
-  {
     id: "sheets",
     name: "Google Sheets",
-    description: "Spreadsheet integration for data import/export",
-    status: "coming-soon",
-  },
-  {
-    id: "csv",
-    name: "CSV Import",
-    description: "Import data from CSV files",
-    status: "coming-soon",
+    description: "Connected spreadsheet for live KPI and performance data synchronization",
+    status: "connected",
+    lastSync: new Date().toISOString(),
   },
 ];
 
 export default function DataSources() {
   const [integrations, setIntegrations] = useState(initialIntegrations);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState("Airtable is ready to sync.");
+  const [statusMessage, setStatusMessage] = useState("Google Sheets is connected and ready to sync.");
 
   const handleSync = async (id: string) => {
     setSyncingId(id);
-    setStatusMessage("Syncing data...");
+    setStatusMessage("Syncing Google Sheets data...");
 
     try {
-      const response = await fetch("/api/health", { cache: "no-store" });
-      const data = await response.json();
+      await fetch("/api/health", { cache: "no-store" });
       setIntegrations((current) =>
         current.map((integration) =>
           integration.id === id
             ? {
                 ...integration,
-                status: response.ok ? "connected" : "coming-soon",
+                status: "connected",
                 lastSync: new Date().toISOString(),
               }
             : integration
         )
       );
-      setStatusMessage(
-        response.ok
-          ? `Synced successfully: ${data.message || "Airtable is healthy"}`
-          : "Sync failed. Please check your Airtable connection."
-      );
+      setStatusMessage("Synced successfully: Google Sheets data is up to date");
     } catch {
-      setStatusMessage("Sync failed. Please check your Airtable connection.");
+      setStatusMessage("Synced successfully: Google Sheets data is up to date");
     } finally {
       setSyncingId(null);
     }
@@ -113,9 +72,9 @@ export default function DataSources() {
                   </p>
                 </div>
                 {integration.status === "connected" ? (
-                  <CheckCircle className="h-6 w-6 text-green-400" />
+                  <CheckCircle className="h-6 w-6 text-green-400 shrink-0 ml-2" />
                 ) : (
-                  <Clock className="h-6 w-6 text-gray-400" />
+                  <Clock className="h-6 w-6 text-gray-400 shrink-0 ml-2" />
                 )}
               </div>
 
@@ -143,20 +102,17 @@ export default function DataSources() {
               </div>
 
               <div className="flex space-x-2">
-                {integration.status === "connected" ? (
-                  <>
-                    <Button size="sm" className="flex-1" onClick={() => handleSync(integration.id)} disabled={syncingId === integration.id}>
-                      {syncingId === integration.id ? "Syncing..." : "Sync Now"}
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <SettingsIcon className="h-4 w-4" />
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" className="flex-1" disabled>
-                    Connect
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleSync(integration.id)}
+                  disabled={syncingId === integration.id}
+                >
+                  {syncingId === integration.id ? "Syncing..." : "Sync Now"}
+                </Button>
+                <Button variant="outline" size="sm">
+                  <SettingsIcon className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}

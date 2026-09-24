@@ -418,7 +418,7 @@ export default function ExecutiveOverview() {
 
         {/* Quick Data Source Footnote */}
         <div className="flex items-center justify-between py-2 text-[11px] text-slate-500 border-t border-slate-800/60">
-          <span>Connected data source: Google Sheets / Airtable</span>
+          <span>Connected data source: Google Sheets</span>
           <Link href="/data-sources" className="text-blue-400 hover:underline">
             Manage Integrations
           </Link>

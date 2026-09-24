@@ -44,16 +44,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Tasks",
         href: "/tasks",
       },
-      {
-        id: "kanban",
-        label: "Kanban",
-        href: "/kanban",
-      },
-      {
-        id: "task-calendar",
-        label: "Calendar",
-        href: "/task-calendar",
-      },
     ],
   },
   {
@@ -88,16 +78,6 @@ export const NAV_SECTIONS: NavSection[] = [
         id: "data-sources",
         label: "Data Sources",
         href: "/data-sources",
-      },
-      {
-        id: "import-mapping",
-        label: "Import / Export",
-        href: "/import-mapping",
-      },
-      {
-        id: "settings",
-        label: "Settings",
-        href: "/settings",
       },
     ],
   },
