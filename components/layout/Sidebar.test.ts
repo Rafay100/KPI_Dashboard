@@ -61,7 +61,11 @@ describe("Client Sidebar Navigation Structure", () => {
       {
         title: "WORK MANAGEMENT",
         items: [
-          { label: "Tasks", href: "/tasks" },
+          { label: "Execution", href: "/tasks" },
+          { label: "To-Dos", href: "/todos" },
+          { label: "Issues / IDS", href: "/issues-ids" },
+          { label: "Rocks / Quarterly Goals", href: "/rocks" },
+          { label: "L10 Meetings", href: "/l10-meetings" },
         ],
       },
       {

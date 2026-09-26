@@ -21,6 +21,10 @@ import {
   ArrowDownToLine,
   Settings,
   X,
+  AlertCircle,
+  Mountain,
+  CalendarCheck,
+  ListTodo,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -31,6 +35,13 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   departments: Building2,
   rankings: Trophy,
   tasks: CheckSquare,
+  todos: ListTodo,
+  "to-dos": ListTodo,
+  "issues-ids": AlertCircle,
+  issues: AlertCircle,
+  rocks: Mountain,
+  "l10-meetings": CalendarCheck,
+  l10: CalendarCheck,
   kanban: Columns3,
   "task-calendar": Calendar,
   "kpi-analytics": BarChart3,

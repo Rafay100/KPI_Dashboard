@@ -41,8 +41,28 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       {
         id: "tasks",
-        label: "Tasks",
+        label: "Execution",
         href: "/tasks",
+      },
+      {
+        id: "todos",
+        label: "To-Dos",
+        href: "/todos",
+      },
+      {
+        id: "issues-ids",
+        label: "Issues / IDS",
+        href: "/issues-ids",
+      },
+      {
+        id: "rocks",
+        label: "Rocks / Quarterly Goals",
+        href: "/rocks",
+      },
+      {
+        id: "l10-meetings",
+        label: "L10 Meetings",
+        href: "/l10-meetings",
       },
     ],
   },

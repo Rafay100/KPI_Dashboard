@@ -850,10 +850,10 @@ function TasksContent() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 border border-blue-400/20 shadow-md">
                 <CheckSquare className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Tasks</h1>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Execution</h1>
             </div>
             <p className="mt-1.5 text-sm text-gray-400 font-medium">
-              Enterprise Task Management · {computedTasks.length} total tasks · All actions sync to Airtable immediately
+              Enterprise Task Execution & Management · {computedTasks.length} total tasks · All actions sync to Airtable immediately
             </p>
           </div>
           <div className="flex flex-col items-end text-xs text-gray-400 space-y-1">
